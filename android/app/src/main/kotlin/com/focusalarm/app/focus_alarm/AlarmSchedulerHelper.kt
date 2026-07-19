@@ -12,8 +12,8 @@ object AlarmSchedulerHelper {
     const val PREFS_NAME = "FocusAlarmPrefs"
     const val PREFS_KEY_ALARMS = "scheduled_alarms"
 
-    fun scheduleAlarm(context: Context, id: Int, timestampMillis: Long, label: String): Boolean {
-        Log.d(TAG, "Scheduling exact alarm id=$id label=$label for timestamp=$timestampMillis")
+    fun scheduleAlarm(context: Context, id: Int, timestampMillis: Long, label: String, soundPath: String = ""): Boolean {
+        Log.d(TAG, "Scheduling exact alarm id=$id label=$label soundPath=$soundPath for timestamp=$timestampMillis")
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return false
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -27,6 +27,7 @@ object AlarmSchedulerHelper {
             putExtra("id", id)
             putExtra("label", label)
             putExtra("timestampMillis", timestampMillis)
+            putExtra("soundPath", soundPath)
         }
 
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -48,7 +49,7 @@ object AlarmSchedulerHelper {
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, timestampMillis, pendingIntent)
             }
-            saveToPrefs(context, id, timestampMillis, label)
+            saveToPrefs(context, id, timestampMillis, label, soundPath)
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error calling setExactAndAllowWhileIdle", e)
@@ -72,13 +73,13 @@ object AlarmSchedulerHelper {
         removeFromPrefs(context, id)
     }
 
-    private fun saveToPrefs(context: Context, id: Int, timestampMillis: Long, label: String) {
+    private fun saveToPrefs(context: Context, id: Int, timestampMillis: Long, label: String, soundPath: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val currentSet = prefs.getStringSet(PREFS_KEY_ALARMS, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
         // Remove existing entry for id if present
         currentSet.removeAll { it.startsWith("$id|") }
-        // Format: id|timestampMillis|label
-        currentSet.add("$id|$timestampMillis|$label")
+        // Format: id|timestampMillis|label|soundPath
+        currentSet.add("$id|$timestampMillis|$label|$soundPath")
         prefs.edit().putStringSet(PREFS_KEY_ALARMS, currentSet).apply()
     }
 
@@ -98,14 +99,15 @@ object AlarmSchedulerHelper {
 
         val validAlarms = mutableSetOf<String>()
         for (entry in currentSet) {
-            val parts = entry.split("|", limit = 3)
-            if (parts.size == 3) {
+            val parts = entry.split("|", limit = 4)
+            if (parts.size >= 3) {
                 val id = parts[0].toIntOrNull() ?: continue
                 val timestampMillis = parts[1].toLongOrNull() ?: continue
                 val label = parts[2]
+                val soundPath = if (parts.size == 4) parts[3] else ""
 
                 if (timestampMillis > now) {
-                    scheduleAlarm(context, id, timestampMillis, label)
+                    scheduleAlarm(context, id, timestampMillis, label, soundPath)
                     validAlarms.add(entry)
                 } else {
                     Log.d(TAG, "Alarm id=$id timestamp=$timestampMillis is in the past, removing from prefs.")

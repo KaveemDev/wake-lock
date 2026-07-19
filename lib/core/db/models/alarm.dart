@@ -20,6 +20,8 @@ class Alarm {
 
   late String soundName;
 
+  String? soundPath; // custom audio file path
+
   late String missionType; // 'math', 'shake', 'typing', 'memory', 'step', 'none'
 
   late String missionDifficulty; // 'easy', 'medium', 'hard'
@@ -28,7 +30,9 @@ class Alarm {
 
   late bool isHardcoreMode; // prevents lowering volume & locks snooze
 
-  late bool isVerificationRequired; // asks for confirmation 5 min after dismiss
+  late bool isVerificationRequired; // asks for confirmation after dismiss
+
+  late int verificationDurationMinutes; // duration after which check is triggered
 
   Alarm({
     required this.time,
@@ -38,10 +42,12 @@ class Alarm {
     this.vibrate = true,
     this.snoozeDurationMinutes = 5,
     this.soundName = 'Default System Alarm',
+    this.soundPath,
     this.missionType = 'math',
     this.missionDifficulty = 'medium',
     this.missionCount = 3,
     this.isHardcoreMode = false,
     this.isVerificationRequired = true,
+    this.verificationDurationMinutes = 5,
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/isar_service.dart';
 import '../../../core/utils/alarm_time_utils.dart';
 import '../../missions/models/mission.dart';
+import '../../permissions/views/permissions_screen.dart';
 import '../../stats/views/stats_screen.dart';
 import '../providers/alarms_provider.dart';
 import 'alarm_edit_screen.dart';
@@ -15,19 +16,30 @@ class AlarmListScreen extends ConsumerWidget {
     final alarmsAsync = ref.watch(alarmsStreamProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF12121A),
+      backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'FOCUS ALARM',
+          'WAKELOCK',
           style: TextStyle(
             fontWeight: FontWeight.w900,
-            letterSpacing: 2,
-            fontSize: 22,
+            letterSpacing: 3,
+            fontSize: 24,
+            color: Colors.white,
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.security, color: Colors.tealAccent, size: 26),
+            tooltip: 'App Permissions',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PermissionsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.bar_chart_rounded, color: Colors.tealAccent, size: 28),
             tooltip: 'Statistics & History',
@@ -38,6 +50,7 @@ class AlarmListScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: alarmsAsync.when(
@@ -56,13 +69,20 @@ class AlarmListScreen extends ConsumerWidget {
                   gradient: LinearGradient(
                     colors: [
                       Colors.teal.withOpacity(0.25),
-                      const Color(0xFF1E1E2C),
+                      const Color(0xFF181824),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.tealAccent.withOpacity(0.2)),
+                  border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -88,6 +108,8 @@ class AlarmListScreen extends ConsumerWidget {
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -98,6 +120,8 @@ class AlarmListScreen extends ConsumerWidget {
                               color: Colors.white60,
                               fontSize: 13,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -148,13 +172,13 @@ class AlarmListScreen extends ConsumerWidget {
                             margin: const EdgeInsets.only(bottom: 14),
                             decoration: BoxDecoration(
                               color: alarm.enabled
-                                  ? const Color(0xFF1E1E2C)
-                                  : const Color(0xFF161620),
+                                  ? const Color(0xFF181824)
+                                  : const Color(0xFF14141E),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: alarm.enabled
-                                    ? Colors.tealAccent.withOpacity(0.3)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? Colors.tealAccent.withOpacity(0.35)
+                                    : Colors.white.withOpacity(0.06),
                               ),
                               boxShadow: alarm.enabled
                                   ? [
@@ -190,49 +214,60 @@ class AlarmListScreen extends ConsumerWidget {
                                               crossAxisAlignment: CrossAxisAlignment.baseline,
                                               textBaseline: TextBaseline.alphabetic,
                                               children: [
-                                                Text(
-                                                  AlarmTimeUtils.formatTime(alarm.time),
-                                                  style: TextStyle(
-                                                    fontSize: 38,
-                                                    fontWeight: FontWeight.w900,
-                                                    color: alarm.enabled
-                                                        ? Colors.white
-                                                        : Colors.white38,
-                                                    letterSpacing: -1,
+                                                FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(
+                                                    AlarmTimeUtils.formatTime(alarm.time),
+                                                    style: TextStyle(
+                                                      fontSize: 38,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: alarm.enabled
+                                                          ? Colors.white
+                                                          : Colors.white38,
+                                                      letterSpacing: -1,
+                                                    ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
-                                                Text(
-                                                  repeatStr,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: alarm.enabled
-                                                        ? Colors.tealAccent
-                                                        : Colors.white24,
+                                                Flexible(
+                                                  child: Text(
+                                                    repeatStr,
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: alarm.enabled
+                                                          ? Colors.tealAccent
+                                                          : Colors.white24,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 6),
-                                            Row(
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 6,
+                                              crossAxisAlignment: WrapCrossAlignment.center,
                                               children: [
                                                 Text(
                                                   alarm.label,
                                                   style: TextStyle(
                                                     fontSize: 15,
-                                                    fontWeight: FontWeight.w500,
+                                                    fontWeight: FontWeight.w600,
                                                     color: alarm.enabled
-                                                        ? Colors.white70
-                                                        : Colors.white30,
+                                                        ? Colors.white
+                                                        : Colors.white38,
                                                   ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
-                                                const SizedBox(width: 10),
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(
-                                                      horizontal: 8, vertical: 2),
+                                                      horizontal: 8, vertical: 3),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.white.withOpacity(0.08),
+                                                    color: Colors.tealAccent.withOpacity(0.12),
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Text(
@@ -244,16 +279,16 @@ class AlarmListScreen extends ConsumerWidget {
                                                     ),
                                                   ),
                                                 ),
-                                                if (alarm.isHardcoreMode) ...[
-                                                  const SizedBox(width: 6),
+                                                if (alarm.isHardcoreMode)
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(
-                                                        horizontal: 6, vertical: 2),
+                                                        horizontal: 6, vertical: 3),
                                                     decoration: BoxDecoration(
                                                       color: Colors.redAccent.withOpacity(0.2),
                                                       borderRadius: BorderRadius.circular(6),
                                                     ),
                                                     child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
                                                       children: [
                                                         Icon(Icons.local_fire_department,
                                                             size: 12, color: Colors.redAccent),
@@ -269,7 +304,31 @@ class AlarmListScreen extends ConsumerWidget {
                                                       ],
                                                     ),
                                                   ),
-                                                ],
+                                                if (alarm.isVerificationRequired)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.cyanAccent.withOpacity(0.15),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.verified_user,
+                                                            size: 11, color: Colors.cyanAccent),
+                                                        SizedBox(width: 3),
+                                                        Text(
+                                                          'VERIFY',
+                                                          style: TextStyle(
+                                                            color: Colors.cyanAccent,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                           ],

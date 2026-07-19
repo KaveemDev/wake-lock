@@ -49,11 +49,12 @@ class AlarmForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val id = intent?.getIntExtra("id", 0) ?: 0
         val label = intent?.getStringExtra("label") ?: "Wake Up!"
+        val soundPath = intent?.getStringExtra("soundPath") ?: ""
         currentAlarmId = id
         currentAlarmLabel = label
         isRinging = true
 
-        Log.d(TAG, "onStartCommand for alarm id=$id label=$label")
+        Log.d(TAG, "onStartCommand for alarm id=$id label=$label soundPath=$soundPath")
 
         // Acquire WakeLock to keep processor awake while alarm rings
         acquireWakeLock()
@@ -85,7 +86,7 @@ class AlarmForegroundService : Service() {
 
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("FOCUS ALARM RINGING")
+            .setContentTitle("WAKELOCK ALARM RINGING")
             .setContentText(label)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -118,7 +119,7 @@ class AlarmForegroundService : Service() {
             Log.e(TAG, "Failed to direct startActivity, relying on fullScreenIntent", e)
         }
 
-        startRingingAndVibration()
+        startRingingAndVibration(soundPath)
 
         return START_STICKY
     }
@@ -127,10 +128,10 @@ class AlarmForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Focus Alarm High Priority",
+                "WakeLock High Priority",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Channel for wake-up verification alarms"
+                description = "Channel for WakeLock wake-up alarms"
                 setSound(null, null) // Sound is handled via MediaPlayer directly
                 enableVibration(true)
             }
@@ -151,15 +152,34 @@ class AlarmForegroundService : Service() {
         }
     }
 
-    private fun startRingingAndVibration() {
+    private fun startRingingAndVibration(soundPath: String) {
         // Start sound
         try {
-            var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            }
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(applicationContext, alarmUri)
+                var sourceSet = false
+                if (soundPath.isNotEmpty()) {
+                    try {
+                        Log.d(TAG, "Attempting to play custom audio from path/URI: $soundPath")
+                        val uri = android.net.Uri.parse(soundPath)
+                        setDataSource(applicationContext, uri)
+                        sourceSet = true
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not play custom audio path $soundPath via Uri, trying direct file path", e)
+                        try {
+                            setDataSource(soundPath)
+                            sourceSet = true
+                        } catch (e2: Exception) {
+                            Log.e(TAG, "Direct file path also failed, falling back to default ringtone", e2)
+                        }
+                    }
+                }
+                if (!sourceSet) {
+                    var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    if (alarmUri == null) {
+                        alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    }
+                    setDataSource(applicationContext, alarmUri)
+                }
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)

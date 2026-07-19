@@ -9,12 +9,14 @@ class AlarmSchedulerService {
     required int id,
     required DateTime time,
     required String label,
+    String? soundPath,
   }) async {
     try {
       final success = await _channel.invokeMethod<bool>('scheduleAlarm', {
         'id': id,
         'timestampMillis': time.millisecondsSinceEpoch,
         'label': label,
+        'soundPath': soundPath ?? '',
       });
       return success ?? false;
     } catch (e) {

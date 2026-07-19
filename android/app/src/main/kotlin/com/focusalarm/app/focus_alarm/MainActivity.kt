@@ -23,9 +23,10 @@ class MainActivity : FlutterActivity() {
                     val id = call.argument<Int>("id") ?: 0
                     val timestampMillis = call.argument<Long>("timestampMillis") ?: 0L
                     val label = call.argument<String>("label") ?: "Wake Up!"
+                    val soundPath = call.argument<String>("soundPath") ?: ""
 
-                    Log.d(TAG, "MethodChannel scheduleAlarm id=$id timestampMillis=$timestampMillis label=$label")
-                    val success = AlarmSchedulerHelper.scheduleAlarm(this, id, timestampMillis, label)
+                    Log.d(TAG, "MethodChannel scheduleAlarm id=$id timestampMillis=$timestampMillis label=$label soundPath=$soundPath")
+                    val success = AlarmSchedulerHelper.scheduleAlarm(this, id, timestampMillis, label, soundPath)
                     result.success(success)
                 }
                 "cancelAlarm" -> {

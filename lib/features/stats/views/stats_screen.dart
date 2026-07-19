@@ -11,39 +11,42 @@ class StatsScreen extends ConsumerWidget {
     final historyAsync = ref.watch(alarmHistoryStreamProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF12121A),
+      backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'WAKE-UP STATISTICS',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 18, color: Colors.white),
         ),
       ),
       body: historyAsync.when(
         data: (history) {
           if (history.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.bar_chart, size: 80, color: Colors.white.withOpacity(0.15)),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No Wake-Up History Yet',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.bar_chart, size: 80, color: Colors.white.withOpacity(0.15)),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No Wake-Up History Yet',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Complete dismissal missions to build your streak & discipline score!',
-                    style: TextStyle(color: Colors.white38, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Complete dismissal missions to build your streak & discipline score!',
+                      style: TextStyle(color: Colors.white38, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -67,7 +70,7 @@ class StatsScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    childAspectRatio: 1.6,
+                    childAspectRatio: 1.5,
                     children: [
                       _buildMetricCard(
                         'DISCIPLINE SCORE',
@@ -123,9 +126,9 @@ class StatsScreen extends ConsumerWidget {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E2C),
+                          color: const Color(0xFF181824),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          border: Border.all(color: Colors.white.withOpacity(0.06)),
                         ),
                         child: Row(
                           children: [
@@ -149,15 +152,20 @@ class StatsScreen extends ConsumerWidget {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '$dateStr • Mission: ${item.missionType.toUpperCase()}',
                                     style: const TextStyle(color: Colors.white54, fontSize: 13),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
@@ -196,11 +204,11 @@ class StatsScreen extends ConsumerWidget {
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2C),
+        color: const Color(0xFF181824),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,19 +217,27 @@ class StatsScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 4),
+              Icon(icon, color: color, size: 18),
             ],
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: color,
+              ),
             ),
           ),
         ],

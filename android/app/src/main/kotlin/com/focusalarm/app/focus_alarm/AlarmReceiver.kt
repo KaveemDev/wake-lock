@@ -26,13 +26,15 @@ class AlarmReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra("id", 0)
         val label = intent.getStringExtra("label") ?: "Wake Up!"
         val timestampMillis = intent.getLongExtra("timestampMillis", System.currentTimeMillis())
+        val soundPath = intent.getStringExtra("soundPath") ?: ""
 
-        Log.d(TAG, "Triggering AlarmForegroundService for alarm id=$id label=$label")
+        Log.d(TAG, "Triggering AlarmForegroundService for alarm id=$id label=$label soundPath=$soundPath")
 
         val serviceIntent = Intent(context, AlarmForegroundService::class.java).apply {
             putExtra("id", id)
             putExtra("label", label)
             putExtra("timestampMillis", timestampMillis)
+            putExtra("soundPath", soundPath)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

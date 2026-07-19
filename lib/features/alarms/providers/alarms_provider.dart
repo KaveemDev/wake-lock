@@ -19,11 +19,13 @@ class AlarmsController {
     required bool vibrate,
     required int snoozeDurationMinutes,
     required String soundName,
+    String? soundPath,
     String missionType = 'math',
     String missionDifficulty = 'medium',
     int missionCount = 3,
     bool isHardcoreMode = false,
     bool isVerificationRequired = true,
+    int verificationDurationMinutes = 5,
   }) async {
     final nextRingTime = AlarmTimeUtils.computeNextRingTime(
       hour: hour,
@@ -39,11 +41,13 @@ class AlarmsController {
       vibrate: vibrate,
       snoozeDurationMinutes: snoozeDurationMinutes,
       soundName: soundName,
+      soundPath: soundPath,
       missionType: missionType,
       missionDifficulty: missionDifficulty,
       missionCount: missionCount,
       isHardcoreMode: isHardcoreMode,
       isVerificationRequired: isVerificationRequired,
+      verificationDurationMinutes: verificationDurationMinutes,
     );
 
     if (existingId != null && existingId != 0) {
@@ -56,8 +60,8 @@ class AlarmsController {
       id: id,
       time: nextRingTime,
       label: alarm.label,
+      soundPath: alarm.soundPath,
     );
-
     return id;
   }
 
@@ -75,6 +79,7 @@ class AlarmsController {
         id: alarm.id,
         time: nextRingTime,
         label: alarm.label,
+        soundPath: alarm.soundPath,
       );
     } else {
       alarm.enabled = false;

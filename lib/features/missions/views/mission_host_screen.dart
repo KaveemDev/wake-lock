@@ -88,11 +88,13 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
 
     // Phase 4 Wake-Up Verification Check-in
     if (_alarm != null && _alarm!.isVerificationRequired) {
-      final verifyTime = DateTime.now().add(const Duration(minutes: 5));
+      final verifyMins = _alarm!.verificationDurationMinutes;
+      final verifyTime = DateTime.now().add(Duration(minutes: verifyMins));
       await scheduler.scheduleAlarm(
         id: 90000 + widget.alarmId,
         time: verifyTime,
         label: 'Verification Check! Are you awake?',
+        soundPath: _alarm!.soundPath,
       );
     }
 
@@ -120,6 +122,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       id: widget.alarmId,
       time: snoozeTime,
       label: '${widget.label} (Snoozed)',
+      soundPath: _alarm!.soundPath,
     );
 
     await scheduler.stopAlarmService();
@@ -132,65 +135,80 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF12121A),
+        backgroundColor: Color(0xFF0D0D14),
         body: Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
       );
     }
 
     if (_isMissionSolved) {
       final quote = _briefingQuotes[DateTime.now().second % _briefingQuotes.length];
+      final verifyMins = _alarm?.verificationDurationMinutes ?? 5;
       return Scaffold(
-        backgroundColor: const Color(0xFF12121A),
+        backgroundColor: const Color(0xFF0D0D14),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(28.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.check_circle, size: 96, color: Colors.tealAccent),
-                const SizedBox(height: 24),
-                const Text(
-                  'MISSION ACCOMPLISHED!',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_alarm?.isVerificationRequired == true)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade900.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'Wake-up check-in scheduled in 5 minutes.',
-                      style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                const SizedBox(height: 36),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E2C),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    '"$quote"',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontStyle: FontStyle.italic,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle, size: 96, color: Colors.tealAccent),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'MISSION ACCOMPLISHED!',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      height: 1.4,
+                      letterSpacing: 1.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  if (_alarm?.isVerificationRequired == true)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.cyanAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.verified_user, color: Colors.cyanAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Wake-up check-in scheduled in $verifyMins ${verifyMins == 1 ? "minute" : "minutes"}.',
+                              style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 36),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF181824),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '"$quote"',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.white,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -203,7 +221,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     final isHardcore = _alarm?.isHardcoreMode ?? false;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF12121A),
+      backgroundColor: const Color(0xFF0D0D14),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -222,6 +240,8 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                         color: Colors.white,
                         letterSpacing: 1.5,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (isHardcore)
@@ -249,7 +269,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Divider(color: Colors.white10),
+              const Divider(color: Colors.white12),
               const SizedBox(height: 16),
 
               // Active Mission View
@@ -279,8 +299,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   Widget _buildMissionContent(String type, String difficulty, int count) {
     switch (type) {
       case 'shake':
+        final target = count >= 10 ? count : count * 10;
         return ShakeMissionView(
-          targetShakes: count * 10, // e.g. 3 count = 30 shakes
+          targetShakes: target,
           onCompleted: _onMissionComplete,
         );
       case 'typing':
@@ -296,8 +317,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
           onCompleted: _onMissionComplete,
         );
       case 'step':
+        final targetSteps = count >= 10 ? count : count * 10;
         return StepMissionView(
-          targetSteps: count * 10, // e.g. 2 count = 20 steps
+          targetSteps: targetSteps,
           onCompleted: _onMissionComplete,
         );
       case 'math':
