@@ -28,7 +28,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val timestampMillis = intent.getLongExtra("timestampMillis", System.currentTimeMillis())
         val soundPath = intent.getStringExtra("soundPath") ?: ""
 
-        Log.d(TAG, "Triggering AlarmForegroundService for alarm id=$id label=$label soundPath=$soundPath")
+        Log.d(TAG, "Triggering AlarmForegroundService and launching RingingActivity for alarm id=$id label=$label soundPath=$soundPath")
 
         val serviceIntent = Intent(context, AlarmForegroundService::class.java).apply {
             putExtra("id", id)
@@ -41,6 +41,28 @@ class AlarmReceiver : BroadcastReceiver() {
             context.startForegroundService(serviceIntent)
         } else {
             context.startService(serviceIntent)
+        }
+
+        try {
+            val ringingIntent = Intent(context, RingingActivity::class.java).apply {
+                putExtra("id", id)
+                putExtra("label", label)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val options = android.app.ActivityOptions.makeBasic()
+                options.setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                context.startActivity(ringingIntent, options.toBundle())
+            } else {
+                context.startActivity(ringingIntent)
+            }
+            Log.d(TAG, "Successfully launched RingingActivity directly from AlarmReceiver")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to direct launch RingingActivity from AlarmReceiver", e)
         }
     }
 }

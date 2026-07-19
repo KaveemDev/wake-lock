@@ -47,6 +47,29 @@ class AlarmForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action
+        if (action == "PAUSE_RING") {
+            Log.d(TAG, "PAUSE_RING received in AlarmForegroundService")
+            try {
+                if (mediaPlayer?.isPlaying == true) {
+                    mediaPlayer?.pause()
+                }
+                vibrator?.cancel()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error pausing audio/vibration", e)
+            }
+            return START_STICKY
+        } else if (action == "RESUME_RING") {
+            Log.d(TAG, "RESUME_RING received in AlarmForegroundService")
+            try {
+                mediaPlayer?.start()
+                startVibrationOnly()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error resuming audio/vibration", e)
+            }
+            return START_STICKY
+        }
+
         val id = intent?.getIntExtra("id", 0) ?: 0
         val label = intent?.getStringExtra("label") ?: "Wake Up!"
         val soundPath = intent?.getStringExtra("soundPath") ?: ""
@@ -213,6 +236,45 @@ class AlarmForegroundService : Service() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start vibration", e)
+        }
+    }
+
+    private fun startVibrationOnly() {
+        try {
+            if (vibrator == null) {
+                vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                    vibratorManager.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+            }
+            val pattern = longArrayOf(0, 1000, 500, 1000, 500)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(pattern, 0)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resume vibration", e)
+        }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (isRinging) {
+            Log.w(TAG, "Task removed while ringing! Restarting service and activity immediately.")
+            val restartServiceIntent = Intent(applicationContext, AlarmForegroundService::class.java).apply {
+                putExtra("id", currentAlarmId)
+                putExtra("label", currentAlarmLabel)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(restartServiceIntent)
+            } else {
+                startService(restartServiceIntent)
+            }
         }
     }
 

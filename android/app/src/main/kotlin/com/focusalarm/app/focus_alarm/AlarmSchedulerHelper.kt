@@ -44,7 +44,14 @@ object AlarmSchedulerHelper {
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val showIntent = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                val showPendingIntent = PendingIntent.getActivity(context, id, showIntent, pendingIntentFlags)
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(timestampMillis, showPendingIntent)
+                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timestampMillis, pendingIntent)
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, timestampMillis, pendingIntent)
@@ -52,8 +59,19 @@ object AlarmSchedulerHelper {
             saveToPrefs(context, id, timestampMillis, label, soundPath)
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Error calling setExactAndAllowWhileIdle", e)
-            return false
+            Log.e(TAG, "Error calling setAlarmClock/setExactAndAllowWhileIdle, trying fallback", e)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timestampMillis, pendingIntent)
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, timestampMillis, pendingIntent)
+                }
+                saveToPrefs(context, id, timestampMillis, label, soundPath)
+                return true
+            } catch (e2: Exception) {
+                Log.e(TAG, "All alarm scheduling attempts failed", e2)
+                return false
+            }
         }
     }
 

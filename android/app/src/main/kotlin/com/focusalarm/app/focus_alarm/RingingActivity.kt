@@ -54,6 +54,22 @@ class RingingActivity : FlutterActivity() {
                     stopAlarmServiceAndFinish()
                     result.success(true)
                 }
+                "pauseRing" -> {
+                    Log.d(TAG, "pauseRing called from Dart.")
+                    val pauseIntent = Intent(this@RingingActivity, AlarmForegroundService::class.java).apply {
+                        action = "PAUSE_RING"
+                    }
+                    startService(pauseIntent)
+                    result.success(true)
+                }
+                "resumeRing" -> {
+                    Log.d(TAG, "resumeRing called from Dart.")
+                    val resumeIntent = Intent(this@RingingActivity, AlarmForegroundService::class.java).apply {
+                        action = "RESUME_RING"
+                    }
+                    startService(resumeIntent)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -69,6 +85,26 @@ class RingingActivity : FlutterActivity() {
         finish()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && AlarmForegroundService.isRinging) {
+            Log.w(TAG, "Lost window focus while ringing (power dialog or status bar pulled). Pulling back on top!")
+            try {
+                val closeDialogsIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                sendBroadcast(closeDialogsIntent)
+            } catch (ignored: Exception) {}
+
+            try {
+                val pullBackIntent = Intent(this, RingingActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+                startActivity(pullBackIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to reorder to front on focus loss", e)
+            }
+        }
+    }
+
     override fun onBackPressed() {
         // Do not allow back button to dismiss alarm without stopping/completing mission
         Log.d(TAG, "onBackPressed ignored while ringing.")
@@ -77,9 +113,10 @@ class RingingActivity : FlutterActivity() {
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN ||
             keyCode == android.view.KeyEvent.KEYCODE_VOLUME_MUTE ||
-            keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) {
-            Log.d(TAG, "Volume key intercepted by RingingActivity.")
-            return true // Consume event so volume doesn't drop
+            keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+            keyCode == android.view.KeyEvent.KEYCODE_APP_SWITCH) {
+            Log.d(TAG, "System/Volume key intercepted by RingingActivity.")
+            return true // Consume event so volume doesn't drop and app switch is blocked
         }
         return super.onKeyDown(keyCode, event)
     }

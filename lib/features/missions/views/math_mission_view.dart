@@ -33,23 +33,40 @@ class _MathMissionViewState extends State<MathMissionView> {
   void _generateProblem() {
     final rnd = Random();
     if (widget.difficulty == 'easy') {
-      final a = 10 + rnd.nextInt(80);
-      final b = 10 + rnd.nextInt(80);
-      _equationText = '$a + $b';
-      _correctAnswer = a + b;
+      // Single digit (+ or -)
+      final isAdd = rnd.nextBool();
+      if (isAdd) {
+        final a = 1 + rnd.nextInt(9);
+        final b = 1 + rnd.nextInt(9);
+        _equationText = '$a + $b';
+        _correctAnswer = a + b;
+      } else {
+        final a = 2 + rnd.nextInt(8); // 2 to 9
+        final b = 1 + rnd.nextInt(a); // 1 to a (ensures positive answer)
+        _equationText = '$a - $b';
+        _correctAnswer = a - b;
+      }
     } else if (widget.difficulty == 'hard') {
+      // Multi-digit & Mixed expressions
       final a = 12 + rnd.nextInt(25);
       final b = 10 + rnd.nextInt(15);
       final c = 10 + rnd.nextInt(50);
       _equationText = '$a × $b + $c';
       _correctAnswer = a * b + c;
     } else {
-      // medium
-      final a = 15 + rnd.nextInt(75);
-      final b = 2 + rnd.nextInt(8);
-      final c = 10 + rnd.nextInt(50);
-      _equationText = '$a + $b × $c';
-      _correctAnswer = a + (b * c);
+      // medium: 2 digits (+ or -)
+      final isAdd = rnd.nextBool();
+      if (isAdd) {
+        final a = 10 + rnd.nextInt(90); // 10 to 99
+        final b = 10 + rnd.nextInt(90); // 10 to 99
+        _equationText = '$a + $b';
+        _correctAnswer = a + b;
+      } else {
+        final a = 20 + rnd.nextInt(80); // 20 to 99
+        final b = 10 + rnd.nextInt(a - 10); // 10 to a-1 (ensures positive answer)
+        _equationText = '$a - $b';
+        _correctAnswer = a - b;
+      }
     }
     _inputBuffer = '';
     _hasError = false;

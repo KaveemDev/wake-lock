@@ -421,6 +421,18 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                           );
                         }).toList(),
                       ),
+                      if (_missionType == 'math') ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _missionDifficulty == 'easy'
+                              ? 'Single Digit Addition & Subtraction (e.g. 7 + 4 or 8 - 3)'
+                              : _missionDifficulty == 'medium'
+                                  ? '2-Digit Addition & Subtraction (e.g. 45 + 32 or 78 - 19)'
+                                  : 'Multi-Digit & Mixed Expressions (e.g. 15 × 12 + 30)',
+                          style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                       const SizedBox(height: 20),
                     ],
 
