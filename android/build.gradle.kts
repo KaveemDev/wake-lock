@@ -16,7 +16,21 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    if (project.name == "file_picker" || project.name == "package_info_plus" || project.name == "wakelock_plus" || project.name == "android_alarm_manager_plus" || project.name == "sensors_plus") {
+        if (!project.plugins.hasPlugin("org.jetbrains.kotlin.android") && !project.plugins.hasPlugin("kotlin-android")) {
+            try {
+                project.plugins.apply("org.jetbrains.kotlin.android")
+            } catch (ignored: Exception) {}
+        }
+    }
     afterEvaluate {
+        if (project.name == "file_picker" || project.name == "package_info_plus" || project.name == "wakelock_plus" || project.name == "android_alarm_manager_plus" || project.name == "sensors_plus") {
+            if (!project.plugins.hasPlugin("org.jetbrains.kotlin.android") && !project.plugins.hasPlugin("kotlin-android")) {
+                try {
+                    project.plugins.apply("org.jetbrains.kotlin.android")
+                } catch (ignored: Exception) {}
+            }
+        }
         val android = project.extensions.findByName("android")
         if (android != null) {
             try {
@@ -42,7 +56,38 @@ subprojects {
                     setNamespace.invoke(android, newNs)
                 }
             } catch (ignored: Exception) {}
+            try {
+                val getCompileOptions = android.javaClass.getMethod("getCompileOptions")
+                val compileOptions = getCompileOptions.invoke(android)
+                if (compileOptions != null) {
+                    val setSource = compileOptions.javaClass.getMethod("setSourceCompatibility", org.gradle.api.JavaVersion::class.java)
+                    val setTarget = compileOptions.javaClass.getMethod("setTargetCompatibility", org.gradle.api.JavaVersion::class.java)
+                    setSource.invoke(compileOptions, org.gradle.api.JavaVersion.VERSION_17)
+                    setTarget.invoke(compileOptions, org.gradle.api.JavaVersion.VERSION_17)
+                }
+            } catch (ignored: Exception) {}
         }
+        try {
+            project.tasks.configureEach {
+                if (this.name.contains("Kotlin")) {
+                    try {
+                        val getCompilerOptions = this.javaClass.getMethod("getCompilerOptions")
+                        val compilerOpts = getCompilerOptions.invoke(this)
+                        val getJvmTarget = compilerOpts.javaClass.getMethod("getJvmTarget")
+                        val jvmTargetProp = getJvmTarget.invoke(compilerOpts)
+                        val setMethod = jvmTargetProp.javaClass.getMethod("set", Any::class.java)
+                        setMethod.invoke(jvmTargetProp, org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                    } catch (ignored: Exception) {
+                        try {
+                            val getKotlinOptions = this.javaClass.getMethod("getKotlinOptions")
+                            val kotlinOpts = getKotlinOptions.invoke(this)
+                            val setJvmTarget = kotlinOpts.javaClass.getMethod("setJvmTarget", String::class.java)
+                            setJvmTarget.invoke(kotlinOpts, "17")
+                        } catch (ignored2: Exception) {}
+                    }
+                }
+            }
+        } catch (ignored: Exception) {}
     }
 }
 

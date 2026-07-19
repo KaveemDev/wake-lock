@@ -107,7 +107,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   Future<void> _pickCustomAudioFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.audio,
       );
       if (result != null && result.files.single.path != null) {
