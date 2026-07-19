@@ -73,4 +73,14 @@ class RingingActivity : FlutterActivity() {
         // Do not allow back button to dismiss alarm without stopping/completing mission
         Log.d(TAG, "onBackPressed ignored while ringing.")
     }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN ||
+            keyCode == android.view.KeyEvent.KEYCODE_VOLUME_MUTE ||
+            keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) {
+            Log.d(TAG, "Volume key intercepted by RingingActivity.")
+            return true // Consume event so volume doesn't drop
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 }

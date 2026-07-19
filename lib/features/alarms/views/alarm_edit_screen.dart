@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/models/alarm.dart';
 import '../../../core/utils/alarm_time_utils.dart';
+import '../../missions/models/mission.dart';
 import '../providers/alarms_provider.dart';
 
 class AlarmEditScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,11 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
   late bool _vibrate;
   late int _snoozeMinutes;
   late String _soundName;
+  late String _missionType;
+  late String _missionDifficulty;
+  late int _missionCount;
+  late bool _isHardcoreMode;
+  late bool _isVerificationRequired;
 
   @override
   void initState() {
@@ -32,6 +38,11 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       _vibrate = alarm.vibrate;
       _snoozeMinutes = alarm.snoozeDurationMinutes;
       _soundName = alarm.soundName;
+      _missionType = alarm.missionType;
+      _missionDifficulty = alarm.missionDifficulty;
+      _missionCount = alarm.missionCount;
+      _isHardcoreMode = alarm.isHardcoreMode;
+      _isVerificationRequired = alarm.isVerificationRequired;
     } else {
       final now = DateTime.now().add(const Duration(minutes: 5));
       _selectedTime = TimeOfDay(hour: now.hour, minute: now.minute);
@@ -40,6 +51,11 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       _vibrate = true;
       _snoozeMinutes = 5;
       _soundName = 'Default System Alarm';
+      _missionType = 'math';
+      _missionDifficulty = 'medium';
+      _missionCount = 3;
+      _isHardcoreMode = false;
+      _isVerificationRequired = true;
     }
   }
 
@@ -176,6 +192,102 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     );
   }
 
+  void _showMissionPicker() {
+    final missions = [
+      const MissionConfig(type: 'math', difficulty: 'medium', count: 3),
+      const MissionConfig(type: 'shake', difficulty: 'medium', count: 3),
+      const MissionConfig(type: 'typing', difficulty: 'medium', count: 2),
+      const MissionConfig(type: 'memory', difficulty: 'medium', count: 3),
+      const MissionConfig(type: 'step', difficulty: 'medium', count: 2),
+      const MissionConfig(type: 'none', difficulty: 'easy', count: 1),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2C),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Select Dismissal Mission',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 1),
+              ...missions.map((cfg) {
+                final isSelected = _missionType == cfg.type;
+                return ListTile(
+                  title: Text(cfg.displayName),
+                  subtitle: Text(cfg.description, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _missionType = cfg.type;
+                      _missionCount = cfg.count;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDifficultyPicker() {
+    final difficulties = ['easy', 'medium', 'hard'];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2C),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Select Mission Difficulty',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 1),
+              ...difficulties.map((diff) {
+                final isSelected = _missionDifficulty == diff;
+                return ListTile(
+                  title: Text(diff.toUpperCase()),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _missionDifficulty = diff;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nextRingTime = AlarmTimeUtils.computeNextRingTime(
@@ -184,6 +296,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       repeatDays: _selectedDays.toList(),
     );
     final countdownText = AlarmTimeUtils.formatCountdown(nextRingTime);
+    final missionCfg = MissionConfig(type: _missionType, difficulty: _missionDifficulty, count: _missionCount);
 
     return Scaffold(
       backgroundColor: const Color(0xFF12121A),
@@ -292,24 +405,44 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                     const SizedBox(height: 24),
 
                     // Label Input
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E2C),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: TextField(
-                        controller: _labelController,
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          icon: Icon(Icons.label_outline, color: Colors.tealAccent),
-                          hintText: 'Alarm Label (e.g. Wake Up)',
-                          hintStyle: TextStyle(color: Colors.white38),
+                    Material(
+                      color: const Color(0xFF1E1E2C),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: TextField(
+                          controller: _labelController,
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            icon: Icon(Icons.label_outline, color: Colors.tealAccent),
+                            hintText: 'Alarm Label (e.g. Wake Up)',
+                            hintStyle: TextStyle(color: Colors.white38),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Mission Selector
+                    _buildTile(
+                      icon: Icons.assignment_turned_in,
+                      title: 'Dismissal Mission',
+                      subtitle: missionCfg.displayName,
+                      onTap: _showMissionPicker,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Mission Difficulty (If mission != none)
+                    if (_missionType != 'none') ...[
+                      _buildTile(
+                        icon: Icons.tune,
+                        title: 'Mission Difficulty',
+                        subtitle: _missionDifficulty.toUpperCase(),
+                        onTap: _showDifficultyPicker,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
 
                     // Sound Selector Tile
                     _buildTile(
@@ -331,12 +464,54 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Vibration Toggle Tile
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E2C),
-                        borderRadius: BorderRadius.circular(16),
+                    // Hardcore Mode Switch Tile
+                    Material(
+                      color: const Color(0xFF1E1E2C),
+                      borderRadius: BorderRadius.circular(16),
+                      child: SwitchListTile(
+                        value: _isHardcoreMode,
+                        activeColor: Colors.redAccent,
+                        onChanged: (val) {
+                          setState(() {
+                            _isHardcoreMode = val;
+                          });
+                        },
+                        secondary: const Icon(Icons.local_fire_department, color: Colors.redAccent),
+                        title: const Text('Hardcore Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text(
+                          'Locks snooze & volume during ring',
+                          style: TextStyle(color: Colors.white54, fontSize: 13),
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Wake-Up Verification Switch Tile
+                    Material(
+                      color: const Color(0xFF1E1E2C),
+                      borderRadius: BorderRadius.circular(16),
+                      child: SwitchListTile(
+                        value: _isVerificationRequired,
+                        activeColor: Colors.tealAccent,
+                        onChanged: (val) {
+                          setState(() {
+                            _isVerificationRequired = val;
+                          });
+                        },
+                        secondary: const Icon(Icons.verified_user, color: Colors.tealAccent),
+                        title: const Text('Wake-Up Verification', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text(
+                          'Follow-up check-in 5 mins after dismiss',
+                          style: TextStyle(color: Colors.white54, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Vibration Toggle Tile
+                    Material(
+                      color: const Color(0xFF1E1E2C),
+                      borderRadius: BorderRadius.circular(16),
                       child: SwitchListTile(
                         value: _vibrate,
                         activeColor: Colors.tealAccent,
@@ -346,7 +521,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                           });
                         },
                         secondary: const Icon(Icons.vibration, color: Colors.tealAccent),
-                        title: const Text('Vibrate While Ringing'),
+                        title: const Text('Vibrate While Ringing', style: TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: const Text(
                           'Pulsing vibration pattern',
                           style: TextStyle(color: Colors.white54, fontSize: 13),
@@ -387,6 +562,11 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                       vibrate: _vibrate,
                       snoozeDurationMinutes: _snoozeMinutes,
                       soundName: _soundName,
+                      missionType: _missionType,
+                      missionDifficulty: _missionDifficulty,
+                      missionCount: _missionCount,
+                      isHardcoreMode: _isHardcoreMode,
+                      isVerificationRequired: _isVerificationRequired,
                     );
                     if (context.mounted) {
                       Navigator.pop(context);
@@ -452,13 +632,12 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2C),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return Material(
+      color: const Color(0xFF1E1E2C),
+      borderRadius: BorderRadius.circular(16),
       child: ListTile(
         onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: Icon(icon, color: Colors.tealAccent),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(

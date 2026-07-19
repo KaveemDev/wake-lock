@@ -5,6 +5,7 @@ import 'core/db/isar_service.dart';
 import 'core/services/alarm_scheduler.dart';
 import 'core/services/permissions_service.dart';
 import 'features/alarms/views/alarm_list_screen.dart';
+import 'features/missions/views/mission_host_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class FocusAlarmApp extends StatelessWidget {
           final id = int.tryParse(uri.queryParameters['id'] ?? '0') ?? 0;
           final label = uri.queryParameters['label'] ?? 'Wake Up!';
           return MaterialPageRoute(
-            builder: (_) => Phase1RingingScreen(id: id, label: label),
+            builder: (_) => MissionHostScreen(alarmId: id, label: label),
           );
         }
         return null;

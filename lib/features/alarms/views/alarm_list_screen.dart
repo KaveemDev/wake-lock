@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/isar_service.dart';
-import '../../../core/db/models/alarm.dart';
 import '../../../core/utils/alarm_time_utils.dart';
+import '../../missions/models/mission.dart';
+import '../../stats/views/stats_screen.dart';
 import '../providers/alarms_provider.dart';
 import 'alarm_edit_screen.dart';
 
@@ -28,10 +29,12 @@ class AlarmListScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white70),
+            icon: const Icon(Icons.bar_chart_rounded, color: Colors.tealAccent, size: 28),
+            tooltip: 'Statistics & History',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings / Mission preferences coming in Phase 3!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StatsScreen()),
               );
             },
           ),
@@ -103,30 +106,6 @@ class AlarmListScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Phase 2 Checkpoint Banner
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade900.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.withOpacity(0.4)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.amberAccent, size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Phase 2 Checkpoint: Tap + to create & manage recurring alarms.',
-                        style: TextStyle(color: Colors.amberAccent, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-
               // Alarms List
               Expanded(
                 child: alarms.isEmpty
@@ -158,6 +137,11 @@ class AlarmListScreen extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           final alarm = alarms[index];
                           final repeatStr = AlarmTimeUtils.formatRepeatDays(alarm.repeatDays);
+                          final missionCfg = MissionConfig(
+                            type: alarm.missionType,
+                            difficulty: alarm.missionDifficulty,
+                            count: alarm.missionCount,
+                          );
 
                           return AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -230,16 +214,63 @@ class AlarmListScreen extends ConsumerWidget {
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              alarm.label,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w500,
-                                                color: alarm.enabled
-                                                    ? Colors.white70
-                                                    : Colors.white30,
-                                              ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  alarm.label,
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: alarm.enabled
+                                                        ? Colors.white70
+                                                        : Colors.white30,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withOpacity(0.08),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    missionCfg.displayName,
+                                                    style: const TextStyle(
+                                                      color: Colors.tealAccent,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (alarm.isHardcoreMode) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.redAccent.withOpacity(0.2),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(Icons.local_fire_department,
+                                                            size: 12, color: Colors.redAccent),
+                                                        SizedBox(width: 2),
+                                                        Text(
+                                                          'HC',
+                                                          style: TextStyle(
+                                                            color: Colors.redAccent,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ],
                                         ),

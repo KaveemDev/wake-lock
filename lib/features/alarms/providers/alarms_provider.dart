@@ -19,6 +19,11 @@ class AlarmsController {
     required bool vibrate,
     required int snoozeDurationMinutes,
     required String soundName,
+    String missionType = 'math',
+    String missionDifficulty = 'medium',
+    int missionCount = 3,
+    bool isHardcoreMode = false,
+    bool isVerificationRequired = true,
   }) async {
     final nextRingTime = AlarmTimeUtils.computeNextRingTime(
       hour: hour,
@@ -34,6 +39,11 @@ class AlarmsController {
       vibrate: vibrate,
       snoozeDurationMinutes: snoozeDurationMinutes,
       soundName: soundName,
+      missionType: missionType,
+      missionDifficulty: missionDifficulty,
+      missionCount: missionCount,
+      isHardcoreMode: isHardcoreMode,
+      isVerificationRequired: isVerificationRequired,
     );
 
     if (existingId != null && existingId != 0) {

@@ -22,33 +22,58 @@ const AlarmSchema = CollectionSchema(
       name: r'enabled',
       type: IsarType.bool,
     ),
-    r'label': PropertySchema(
+    r'isHardcoreMode': PropertySchema(
       id: 1,
+      name: r'isHardcoreMode',
+      type: IsarType.bool,
+    ),
+    r'isVerificationRequired': PropertySchema(
+      id: 2,
+      name: r'isVerificationRequired',
+      type: IsarType.bool,
+    ),
+    r'label': PropertySchema(
+      id: 3,
       name: r'label',
       type: IsarType.string,
     ),
+    r'missionCount': PropertySchema(
+      id: 4,
+      name: r'missionCount',
+      type: IsarType.long,
+    ),
+    r'missionDifficulty': PropertySchema(
+      id: 5,
+      name: r'missionDifficulty',
+      type: IsarType.string,
+    ),
+    r'missionType': PropertySchema(
+      id: 6,
+      name: r'missionType',
+      type: IsarType.string,
+    ),
     r'repeatDays': PropertySchema(
-      id: 2,
+      id: 7,
       name: r'repeatDays',
       type: IsarType.longList,
     ),
     r'snoozeDurationMinutes': PropertySchema(
-      id: 3,
+      id: 8,
       name: r'snoozeDurationMinutes',
       type: IsarType.long,
     ),
     r'soundName': PropertySchema(
-      id: 4,
+      id: 9,
       name: r'soundName',
       type: IsarType.string,
     ),
     r'time': PropertySchema(
-      id: 5,
+      id: 10,
       name: r'time',
       type: IsarType.dateTime,
     ),
     r'vibrate': PropertySchema(
-      id: 6,
+      id: 11,
       name: r'vibrate',
       type: IsarType.bool,
     )
@@ -74,6 +99,8 @@ int _alarmEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.label.length * 3;
+  bytesCount += 3 + object.missionDifficulty.length * 3;
+  bytesCount += 3 + object.missionType.length * 3;
   bytesCount += 3 + object.repeatDays.length * 8;
   bytesCount += 3 + object.soundName.length * 3;
   return bytesCount;
@@ -86,12 +113,17 @@ void _alarmSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeBool(offsets[0], object.enabled);
-  writer.writeString(offsets[1], object.label);
-  writer.writeLongList(offsets[2], object.repeatDays);
-  writer.writeLong(offsets[3], object.snoozeDurationMinutes);
-  writer.writeString(offsets[4], object.soundName);
-  writer.writeDateTime(offsets[5], object.time);
-  writer.writeBool(offsets[6], object.vibrate);
+  writer.writeBool(offsets[1], object.isHardcoreMode);
+  writer.writeBool(offsets[2], object.isVerificationRequired);
+  writer.writeString(offsets[3], object.label);
+  writer.writeLong(offsets[4], object.missionCount);
+  writer.writeString(offsets[5], object.missionDifficulty);
+  writer.writeString(offsets[6], object.missionType);
+  writer.writeLongList(offsets[7], object.repeatDays);
+  writer.writeLong(offsets[8], object.snoozeDurationMinutes);
+  writer.writeString(offsets[9], object.soundName);
+  writer.writeDateTime(offsets[10], object.time);
+  writer.writeBool(offsets[11], object.vibrate);
 }
 
 Alarm _alarmDeserialize(
@@ -102,12 +134,17 @@ Alarm _alarmDeserialize(
 ) {
   final object = Alarm(
     enabled: reader.readBoolOrNull(offsets[0]) ?? true,
-    label: reader.readStringOrNull(offsets[1]) ?? 'Alarm',
-    repeatDays: reader.readLongList(offsets[2]) ?? const [],
-    snoozeDurationMinutes: reader.readLongOrNull(offsets[3]) ?? 5,
-    soundName: reader.readStringOrNull(offsets[4]) ?? 'Default System Alarm',
-    time: reader.readDateTime(offsets[5]),
-    vibrate: reader.readBoolOrNull(offsets[6]) ?? true,
+    isHardcoreMode: reader.readBoolOrNull(offsets[1]) ?? false,
+    isVerificationRequired: reader.readBoolOrNull(offsets[2]) ?? true,
+    label: reader.readStringOrNull(offsets[3]) ?? 'Alarm',
+    missionCount: reader.readLongOrNull(offsets[4]) ?? 3,
+    missionDifficulty: reader.readStringOrNull(offsets[5]) ?? 'medium',
+    missionType: reader.readStringOrNull(offsets[6]) ?? 'math',
+    repeatDays: reader.readLongList(offsets[7]) ?? const [],
+    snoozeDurationMinutes: reader.readLongOrNull(offsets[8]) ?? 5,
+    soundName: reader.readStringOrNull(offsets[9]) ?? 'Default System Alarm',
+    time: reader.readDateTime(offsets[10]),
+    vibrate: reader.readBoolOrNull(offsets[11]) ?? true,
   );
   object.id = id;
   return object;
@@ -123,16 +160,26 @@ P _alarmDeserializeProp<P>(
     case 0:
       return (reader.readBoolOrNull(offset) ?? true) as P;
     case 1:
-      return (reader.readStringOrNull(offset) ?? 'Alarm') as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 2:
-      return (reader.readLongList(offset) ?? const []) as P;
+      return (reader.readBoolOrNull(offset) ?? true) as P;
     case 3:
-      return (reader.readLongOrNull(offset) ?? 5) as P;
+      return (reader.readStringOrNull(offset) ?? 'Alarm') as P;
     case 4:
-      return (reader.readStringOrNull(offset) ?? 'Default System Alarm') as P;
+      return (reader.readLongOrNull(offset) ?? 3) as P;
     case 5:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset) ?? 'medium') as P;
     case 6:
+      return (reader.readStringOrNull(offset) ?? 'math') as P;
+    case 7:
+      return (reader.readLongList(offset) ?? const []) as P;
+    case 8:
+      return (reader.readLongOrNull(offset) ?? 5) as P;
+    case 9:
+      return (reader.readStringOrNull(offset) ?? 'Default System Alarm') as P;
+    case 10:
+      return (reader.readDateTime(offset)) as P;
+    case 11:
       return (reader.readBoolOrNull(offset) ?? true) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -288,6 +335,26 @@ extension AlarmQueryFilter on QueryBuilder<Alarm, Alarm, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> isHardcoreModeEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isHardcoreMode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition>
+      isVerificationRequiredEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isVerificationRequired',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<Alarm, Alarm, QAfterFilterCondition> labelEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -411,6 +478,321 @@ extension AlarmQueryFilter on QueryBuilder<Alarm, Alarm, QFilterCondition> {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'label',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionCountEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'missionCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'missionCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'missionCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'missionCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition>
+      missionDifficultyGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'missionDifficulty',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'missionDifficulty',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'missionDifficulty',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionDifficultyIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'missionDifficulty',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition>
+      missionDifficultyIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'missionDifficulty',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'missionType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'missionType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'missionType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'missionType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterFilterCondition> missionTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'missionType',
         value: '',
       ));
     });
@@ -820,6 +1202,30 @@ extension AlarmQuerySortBy on QueryBuilder<Alarm, Alarm, QSortBy> {
     });
   }
 
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByIsHardcoreMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isHardcoreMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByIsHardcoreModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isHardcoreMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByIsVerificationRequired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVerificationRequired', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByIsVerificationRequiredDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVerificationRequired', Sort.desc);
+    });
+  }
+
   QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByLabel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'label', Sort.asc);
@@ -829,6 +1235,42 @@ extension AlarmQuerySortBy on QueryBuilder<Alarm, Alarm, QSortBy> {
   QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByLabelDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'label', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionDifficulty', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> sortByMissionTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionType', Sort.desc);
     });
   }
 
@@ -906,6 +1348,30 @@ extension AlarmQuerySortThenBy on QueryBuilder<Alarm, Alarm, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByIsHardcoreMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isHardcoreMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByIsHardcoreModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isHardcoreMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByIsVerificationRequired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVerificationRequired', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByIsVerificationRequiredDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isVerificationRequired', Sort.desc);
+    });
+  }
+
   QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByLabel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'label', Sort.asc);
@@ -915,6 +1381,42 @@ extension AlarmQuerySortThenBy on QueryBuilder<Alarm, Alarm, QSortThenBy> {
   QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByLabelDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'label', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionDifficulty', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QAfterSortBy> thenByMissionTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'missionType', Sort.desc);
     });
   }
 
@@ -974,10 +1476,43 @@ extension AlarmQueryWhereDistinct on QueryBuilder<Alarm, Alarm, QDistinct> {
     });
   }
 
+  QueryBuilder<Alarm, Alarm, QDistinct> distinctByIsHardcoreMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isHardcoreMode');
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QDistinct> distinctByIsVerificationRequired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isVerificationRequired');
+    });
+  }
+
   QueryBuilder<Alarm, Alarm, QDistinct> distinctByLabel(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'label', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QDistinct> distinctByMissionCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'missionCount');
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QDistinct> distinctByMissionDifficulty(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'missionDifficulty',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Alarm, Alarm, QDistinct> distinctByMissionType(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'missionType', caseSensitive: caseSensitive);
     });
   }
 
@@ -1026,9 +1561,39 @@ extension AlarmQueryProperty on QueryBuilder<Alarm, Alarm, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Alarm, bool, QQueryOperations> isHardcoreModeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isHardcoreMode');
+    });
+  }
+
+  QueryBuilder<Alarm, bool, QQueryOperations> isVerificationRequiredProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isVerificationRequired');
+    });
+  }
+
   QueryBuilder<Alarm, String, QQueryOperations> labelProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'label');
+    });
+  }
+
+  QueryBuilder<Alarm, int, QQueryOperations> missionCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'missionCount');
+    });
+  }
+
+  QueryBuilder<Alarm, String, QQueryOperations> missionDifficultyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'missionDifficulty');
+    });
+  }
+
+  QueryBuilder<Alarm, String, QQueryOperations> missionTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'missionType');
     });
   }
 
