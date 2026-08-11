@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/db/models/alarm.dart';
 import '../../../core/utils/alarm_time_utils.dart';
 import '../../missions/models/mission.dart';
@@ -111,9 +113,17 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
         type: FileType.audio,
       );
       if (result != null && result.files.single.path != null) {
+        final tempPath = result.files.single.path!;
+        final fileName = result.files.single.name;
+        final appDir = await getApplicationDocumentsDirectory();
+        final customSoundsDir = Directory('${appDir.path}/custom_sounds');
+        if (!await customSoundsDir.exists()) {
+          await customSoundsDir.create(recursive: true);
+        }
+        final savedFile = await File(tempPath).copy('${customSoundsDir.path}/$fileName');
         setState(() {
-          _soundPath = result.files.single.path;
-          _soundName = result.files.single.name;
+          _soundPath = savedFile.path;
+          _soundName = fileName;
         });
       }
     } catch (e) {

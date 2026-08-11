@@ -1,5 +1,6 @@
 package com.focusalarm.app.focus_alarm
 
+import android.app.AlarmManager
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ class RingingActivity : FlutterActivity() {
     companion object {
         const val TAG = "RingingActivity"
         const val CHANNEL = "com.focusalarm.app/ringing"
+        const val SCHEDULER_CHANNEL = "com.focusalarm.app/scheduler"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +46,15 @@ class RingingActivity : FlutterActivity() {
         return "/ringing?id=$id&label=$label"
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val id = intent.getIntExtra("id", 0)
+        val label = intent.getStringExtra("label") ?: "Wake Up!"
+        Log.d(TAG, "onNewIntent called with id=$id label=$label. Pushing route to Flutter.")
+        flutterEngine?.navigationChannel?.pushRoute("/ringing?id=$id&label=$label")
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -69,6 +80,37 @@ class RingingActivity : FlutterActivity() {
                     }
                     startService(resumeIntent)
                     result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SCHEDULER_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "scheduleAlarm" -> {
+                    val id = call.argument<Int>("id") ?: 0
+                    val timestampMillis = call.argument<Long>("timestampMillis") ?: 0L
+                    val label = call.argument<String>("label") ?: "Wake Up!"
+                    val soundPath = call.argument<String>("soundPath") ?: ""
+
+                    Log.d(TAG, "RingingActivity MethodChannel scheduleAlarm id=$id timestampMillis=$timestampMillis label=$label soundPath=$soundPath")
+                    val success = AlarmSchedulerHelper.scheduleAlarm(this, id, timestampMillis, label, soundPath)
+                    result.success(success)
+                }
+                "cancelAlarm" -> {
+                    val id = call.argument<Int>("id") ?: 0
+                    Log.d(TAG, "RingingActivity MethodChannel cancelAlarm id=$id")
+                    AlarmSchedulerHelper.cancelAlarm(this, id)
+                    result.success(true)
+                }
+                "canScheduleExactAlarms" -> {
+                    val canSchedule = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+                        alarmManager?.canScheduleExactAlarms() == true
+                    } else {
+                        true
+                    }
+                    result.success(canSchedule)
                 }
                 else -> result.notImplemented()
             }

@@ -59,60 +59,80 @@ class _StepMissionViewState extends State<StepMissionView> {
   Widget build(BuildContext context) {
     final progress = (_steps / widget.targetSteps).clamp(0.0, 1.0);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'WALK AWAY FROM YOUR BED',
-          style: TextStyle(
-            color: Colors.tealAccent,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 36),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 220,
-              height: 220,
-              child: CircularProgressIndicator(
-                value: progress,
-                strokeWidth: 16,
-                backgroundColor: Colors.white.withOpacity(0.1),
-                color: Colors.tealAccent,
-              ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.directions_walk, size: 48, color: Colors.tealAccent),
-                const SizedBox(height: 8),
-                Text(
-                  '$_steps / ${widget.targetSteps}',
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'WALK AWAY FROM YOUR BED',
+                    style: TextStyle(
+                      color: Colors.tealAccent,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-                const Text(
-                  'STEPS',
-                  style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold),
+                const SizedBox(height: 36),
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 220,
+                      height: 220,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 16,
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        color: Colors.tealAccent,
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.directions_walk, size: 48, color: Colors.tealAccent),
+                        const SizedBox(height: 8),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '$_steps / ${widget.targetSteps}',
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          'STEPS',
+                          style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 36),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Get out of bed and take steps around your room to stop the alarm.',
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
-        const SizedBox(height: 36),
-        const Text(
-          'Get out of bed and take steps around your room to stop the alarm.',
-          style: TextStyle(color: Colors.white54, fontSize: 14),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          ),
+        );
+      },
     );
   }
 }

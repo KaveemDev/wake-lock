@@ -109,95 +109,115 @@ class _MathMissionViewState extends State<MathMissionView> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Header
-        Text(
-          'PROBLEM $_currentIndex of ${widget.totalProblems}',
-          style: const TextStyle(
-            color: Colors.tealAccent,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Header
+                Text(
+                  'PROBLEM $_currentIndex of ${widget.totalProblems}',
+                  style: const TextStyle(
+                    color: Colors.tealAccent,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-        // Equation Card
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E2C),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _hasError ? Colors.redAccent : Colors.white.withOpacity(0.1),
-              width: _hasError ? 2 : 1,
+                // Equation Card
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E2C),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _hasError ? Colors.redAccent : Colors.white.withOpacity(0.1),
+                      width: _hasError ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$_equationText = ?',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: 200,
+                        height: 54,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _hasError ? Colors.redAccent : Colors.tealAccent.withOpacity(0.4),
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              _inputBuffer.isEmpty ? (_hasError ? 'WRONG' : '_') : _inputBuffer,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: _hasError ? Colors.redAccent : Colors.tealAccent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Keypad
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: GridView.count(
+                    crossAxisCount: 3,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 1.45,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    children: [
+                      _buildKey('1', () => _onDigit('1')),
+                      _buildKey('2', () => _onDigit('2')),
+                      _buildKey('3', () => _onDigit('3')),
+                      _buildKey('4', () => _onDigit('4')),
+                      _buildKey('5', () => _onDigit('5')),
+                      _buildKey('6', () => _onDigit('6')),
+                      _buildKey('7', () => _onDigit('7')),
+                      _buildKey('8', () => _onDigit('8')),
+                      _buildKey('9', () => _onDigit('9')),
+                      _buildKey('C', _onClear, color: Colors.redAccent.withOpacity(0.2), textColor: Colors.redAccent),
+                      _buildKey('0', () => _onDigit('0')),
+                      _buildKey('✓', _onSubmit, color: Colors.tealAccent, textColor: Colors.black),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Column(
-            children: [
-              Text(
-                '$_equationText = ?',
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: 200,
-                height: 54,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _hasError ? Colors.redAccent : Colors.tealAccent.withOpacity(0.4),
-                  ),
-                ),
-                child: Text(
-                  _inputBuffer.isEmpty ? (_hasError ? 'WRONG' : '_') : _inputBuffer,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: _hasError ? Colors.redAccent : Colors.tealAccent,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Keypad
-        SizedBox(
-          width: 300,
-          child: GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.4,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            children: [
-              _buildKey('1', () => _onDigit('1')),
-              _buildKey('2', () => _onDigit('2')),
-              _buildKey('3', () => _onDigit('3')),
-              _buildKey('4', () => _onDigit('4')),
-              _buildKey('5', () => _onDigit('5')),
-              _buildKey('6', () => _onDigit('6')),
-              _buildKey('7', () => _onDigit('7')),
-              _buildKey('8', () => _onDigit('8')),
-              _buildKey('9', () => _onDigit('9')),
-              _buildKey('C', _onClear, color: Colors.redAccent.withOpacity(0.2), textColor: Colors.redAccent),
-              _buildKey('0', () => _onDigit('0')),
-              _buildKey('✓', _onSubmit, color: Colors.tealAccent, textColor: Colors.black),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -209,12 +229,15 @@ class _MathMissionViewState extends State<MathMissionView> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: textColor ?? Colors.white,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: textColor ?? Colors.white,
+              ),
             ),
           ),
         ),

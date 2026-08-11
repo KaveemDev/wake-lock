@@ -95,76 +95,98 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'MEMORY ROUND $_currentRound of ${widget.totalRounds}',
-          style: const TextStyle(
-            color: Colors.tealAccent,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          _isShowingSequence
-              ? (_hasError ? 'WRONG! WATCH AGAIN...' : 'WATCH THE SEQUENCE...')
-              : 'REPEAT THE SEQUENCE (${_userInputs.length} / ${_sequence.length})',
-          style: TextStyle(
-            color: _hasError ? Colors.redAccent : Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 28),
-
-        // 3x3 Grid
-        SizedBox(
-          width: 280,
-          height: 280,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-            ),
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 9,
-            itemBuilder: (context, index) {
-              final isFlashing = _flashingTile == index;
-              return GestureDetector(
-                onTap: () => _onTileTap(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: isFlashing
-                        ? Colors.tealAccent
-                        : (_hasError && _userInputs.isNotEmpty && _userInputs.last == index
-                            ? Colors.redAccent
-                            : const Color(0xFF262638)),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isFlashing ? Colors.white : Colors.white.withOpacity(0.1),
-                      width: isFlashing ? 3 : 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'MEMORY ROUND $_currentRound of ${widget.totalRounds}',
+                    style: const TextStyle(
+                      color: Colors.tealAccent,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      fontSize: 14,
                     ),
-                    boxShadow: isFlashing
-                        ? [
-                            BoxShadow(
-                              color: Colors.tealAccent.withOpacity(0.6),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            )
-                          ]
-                        : [],
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _isShowingSequence
+                          ? (_hasError ? 'WRONG! WATCH AGAIN...' : 'WATCH THE SEQUENCE...')
+                          : 'REPEAT THE SEQUENCE (${_userInputs.length} / ${_sequence.length})',
+                      style: TextStyle(
+                        color: _hasError ? Colors.redAccent : Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // 3x3 Grid
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 280, maxHeight: 280),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 9,
+                      itemBuilder: (context, index) {
+                        final isFlashing = _flashingTile == index;
+                        return GestureDetector(
+                          onTap: () => _onTileTap(index),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: isFlashing
+                                  ? Colors.tealAccent
+                                  : (_hasError && _userInputs.isNotEmpty && _userInputs.last == index
+                                      ? Colors.redAccent
+                                      : const Color(0xFF262638)),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isFlashing ? Colors.white : Colors.white.withOpacity(0.1),
+                                width: isFlashing ? 3 : 1,
+                              ),
+                              boxShadow: isFlashing
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.tealAccent.withOpacity(0.6),
+                                        blurRadius: 16,
+                                        spreadRadius: 2,
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

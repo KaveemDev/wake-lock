@@ -32,6 +32,8 @@ class AlarmForegroundService : Service() {
             private set
         var currentAlarmLabel: String = ""
             private set
+        var currentSoundPath: String = ""
+            private set
     }
 
     private var mediaPlayer: MediaPlayer? = null
@@ -62,8 +64,12 @@ class AlarmForegroundService : Service() {
         } else if (action == "RESUME_RING") {
             Log.d(TAG, "RESUME_RING received in AlarmForegroundService")
             try {
-                mediaPlayer?.start()
-                startVibrationOnly()
+                if (mediaPlayer == null) {
+                    startRingingAndVibration(currentSoundPath)
+                } else {
+                    mediaPlayer?.start()
+                    startVibrationOnly()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error resuming audio/vibration", e)
             }
@@ -75,6 +81,7 @@ class AlarmForegroundService : Service() {
         val soundPath = intent?.getStringExtra("soundPath") ?: ""
         currentAlarmId = id
         currentAlarmLabel = label
+        currentSoundPath = soundPath
         isRinging = true
 
         Log.d(TAG, "onStartCommand for alarm id=$id label=$label soundPath=$soundPath")
@@ -107,9 +114,10 @@ class AlarmForegroundService : Service() {
             pendingIntentFlags
         )
 
+        val notifTitle = if (id >= 90000) "WAKE-UP CHECK-IN" else "WAKELOCK ALARM RINGING"
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("WAKELOCK ALARM RINGING")
+            .setContentTitle(notifTitle)
             .setContentText(label)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -142,7 +150,12 @@ class AlarmForegroundService : Service() {
             Log.e(TAG, "Failed to direct startActivity, relying on fullScreenIntent", e)
         }
 
-        startRingingAndVibration(soundPath)
+        // For Wake-Up Verification Check (id >= 90000), do NOT start ringing until 60s timeout
+        if (id < 90000) {
+            startRingingAndVibration(soundPath)
+        } else {
+            Log.d(TAG, "Wake-up check-in initialized silently for id=$id. Waiting for 60s timeout before ringing.")
+        }
 
         return START_STICKY
     }
@@ -176,33 +189,19 @@ class AlarmForegroundService : Service() {
     }
 
     private fun startRingingAndVibration(soundPath: String) {
+        if (mediaPlayer != null) {
+            try {
+                mediaPlayer?.stop()
+                mediaPlayer?.release()
+                mediaPlayer = null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error resetting existing mediaPlayer", e)
+            }
+        }
+
         // Start sound
         try {
             mediaPlayer = MediaPlayer().apply {
-                var sourceSet = false
-                if (soundPath.isNotEmpty()) {
-                    try {
-                        Log.d(TAG, "Attempting to play custom audio from path/URI: $soundPath")
-                        val uri = android.net.Uri.parse(soundPath)
-                        setDataSource(applicationContext, uri)
-                        sourceSet = true
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not play custom audio path $soundPath via Uri, trying direct file path", e)
-                        try {
-                            setDataSource(soundPath)
-                            sourceSet = true
-                        } catch (e2: Exception) {
-                            Log.e(TAG, "Direct file path also failed, falling back to default ringtone", e2)
-                        }
-                    }
-                }
-                if (!sourceSet) {
-                    var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    if (alarmUri == null) {
-                        alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                    }
-                    setDataSource(applicationContext, alarmUri)
-                }
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -210,8 +209,62 @@ class AlarmForegroundService : Service() {
                         .build()
                 )
                 isLooping = true
-                prepare()
-                start()
+
+                var sourceSet = false
+                if (soundPath.isNotEmpty()) {
+                    try {
+                        val file = java.io.File(soundPath)
+                        if (file.exists()) {
+                            setDataSource(soundPath)
+                            sourceSet = true
+                            Log.d(TAG, "Successfully setDataSource to custom file path: $soundPath")
+                        } else {
+                            val uri = android.net.Uri.parse(soundPath)
+                            setDataSource(applicationContext, uri)
+                            sourceSet = true
+                            Log.d(TAG, "Successfully setDataSource to custom URI: $soundPath")
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to load custom audio $soundPath, trying system ringtones", e)
+                        sourceSet = false
+                    }
+                }
+
+                if (!sourceSet) {
+                    val ringtoneTypes = arrayOf(
+                        RingtoneManager.TYPE_ALARM,
+                        RingtoneManager.TYPE_RINGTONE,
+                        RingtoneManager.TYPE_NOTIFICATION
+                    )
+                    for (type in ringtoneTypes) {
+                        try {
+                            val uri = RingtoneManager.getDefaultUri(type)
+                            if (uri != null) {
+                                reset()
+                                setAudioAttributes(
+                                    AudioAttributes.Builder()
+                                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                        .setUsage(AudioAttributes.USAGE_ALARM)
+                                        .build()
+                                )
+                                isLooping = true
+                                setDataSource(applicationContext, uri)
+                                sourceSet = true
+                                Log.d(TAG, "Successfully setDataSource to system ringtone type=$type")
+                                break
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed fallback system ringtone type=$type", e)
+                        }
+                    }
+                }
+
+                if (sourceSet) {
+                    prepare()
+                    start()
+                } else {
+                    Log.e(TAG, "All audio sources failed to initialize in MediaPlayer")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start MediaPlayer sound", e)

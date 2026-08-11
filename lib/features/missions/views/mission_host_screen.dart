@@ -6,6 +6,7 @@ import '../../../core/db/isar_service.dart';
 import '../../../core/db/models/alarm.dart';
 import '../../../core/db/models/alarm_history.dart';
 import '../../../core/services/alarm_scheduler.dart';
+import '../../../core/utils/alarm_time_utils.dart';
 import 'math_mission_view.dart';
 import 'shake_mission_view.dart';
 import 'typing_mission_view.dart';
@@ -31,6 +32,10 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   bool _isLoading = true;
   bool _isMissionSolved = false;
   bool _hasStartedMission = false;
+  bool _isVerificationCheck = false;
+  bool _isVerificationConfirmed = false;
+  int _verificationSecondsRemaining = 60;
+  Timer? _verificationTimer;
   Timer? _idleTimer;
   int _secondsRemaining = 60;
   late DateTime _startTime;
@@ -54,18 +59,81 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   @override
   void dispose() {
     _idleTimer?.cancel();
+    _verificationTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _loadAlarmData() async {
     final isarService = ref.read(isarServiceProvider);
     final isar = await isarService.db;
-    final alarm = await isar.alarms.get(widget.alarmId);
+    final isVerify = widget.alarmId >= 90000;
+    final realId = isVerify ? widget.alarmId - 90000 : widget.alarmId;
+    final alarm = await isar.alarms.get(realId);
     if (mounted) {
       setState(() {
         _alarm = alarm;
         _isLoading = false;
+        _isVerificationCheck = isVerify;
       });
+      if (isVerify) {
+        _startVerificationTimer();
+      }
+    }
+  }
+
+  void _startVerificationTimer() {
+    _verificationTimer?.cancel();
+    _verificationSecondsRemaining = 60;
+    _verificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_verificationSecondsRemaining <= 1) {
+        _verificationTimer?.cancel();
+        _onVerificationFailedEscalate();
+      } else {
+        setState(() {
+          _verificationSecondsRemaining--;
+        });
+      }
+    });
+  }
+
+  Future<void> _onVerificationConfirm() async {
+    _verificationTimer?.cancel();
+    setState(() {
+      _isVerificationConfirmed = true;
+    });
+
+    final isarService = ref.read(isarServiceProvider);
+    final scheduler = ref.read(alarmSchedulerProvider);
+    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
+
+    final history = AlarmHistory(
+      alarmId: realId,
+      alarmLabel: widget.label,
+      timestamp: DateTime.now(),
+      missionType: 'wake_up_verification',
+      dismissTimeSeconds: 60 - _verificationSecondsRemaining,
+      snoozeCount: 0,
+      verifiedAwake: true,
+    );
+    await isarService.recordHistory(history);
+
+    await Future.delayed(const Duration(milliseconds: 2500));
+    await scheduler.stopAlarmService();
+    if (mounted) {
+      SystemNavigator.pop();
+    }
+  }
+
+  Future<void> _onVerificationFailedEscalate() async {
+    if (!mounted) return;
+    setState(() {
+      _isVerificationCheck = false;
+    });
+    try {
+      await const MethodChannel('com.focusalarm.app/ringing').invokeMethod('resumeRing');
+    } catch (e) {
+      debugPrint('Failed to resume ring on verification escalation: $e');
     }
   }
 
@@ -115,6 +183,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
 
   Future<void> _onMissionComplete() async {
     _idleTimer?.cancel();
+    _verificationTimer?.cancel();
     setState(() {
       _isMissionSolved = true;
     });
@@ -122,10 +191,11 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     final isarService = ref.read(isarServiceProvider);
     final scheduler = ref.read(alarmSchedulerProvider);
     final elapsedSecs = DateTime.now().difference(_startTime).inSeconds;
+    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
 
     // Record History (Phase 6 Statistics)
     final history = AlarmHistory(
-      alarmId: widget.alarmId,
+      alarmId: realId,
       alarmLabel: widget.label,
       timestamp: DateTime.now(),
       missionType: _alarm?.missionType ?? 'math',
@@ -135,17 +205,33 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     );
     await isarService.recordHistory(history);
 
-    // Turn off one-shot alarms
-    if (_alarm != null && _alarm!.repeatDays.isEmpty) {
-      await isarService.toggleAlarm(_alarm!.id, false);
+    // Turn off one-shot alarms, or reschedule repeating alarms for next occurrence
+    if (_alarm != null) {
+      if (_alarm!.repeatDays.isEmpty) {
+        await isarService.toggleAlarm(realId, false);
+      } else {
+        final nextRingTime = AlarmTimeUtils.computeNextRingTime(
+          hour: _alarm!.time.hour,
+          minute: _alarm!.time.minute,
+          repeatDays: _alarm!.repeatDays,
+        );
+        _alarm!.time = nextRingTime;
+        await isarService.saveAlarm(_alarm!);
+        await scheduler.scheduleAlarm(
+          id: realId,
+          time: nextRingTime,
+          label: _alarm!.label,
+          soundPath: _alarm!.soundPath,
+        );
+      }
     }
 
-    // Phase 4 Wake-Up Verification Check-in
-    if (_alarm != null && _alarm!.isVerificationRequired) {
+    // Phase 4 Wake-Up Verification Check-in (Schedule ONLY if completing primary alarm)
+    if (widget.alarmId < 90000 && _alarm != null && _alarm!.isVerificationRequired) {
       final verifyMins = _alarm!.verificationDurationMinutes;
       final verifyTime = DateTime.now().add(Duration(minutes: verifyMins));
       await scheduler.scheduleAlarm(
-        id: 90000 + widget.alarmId,
+        id: 90000 + realId,
         time: verifyTime,
         label: 'Verification Check! Are you awake?',
         soundPath: _alarm!.soundPath,
@@ -162,6 +248,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
 
   Future<void> _onSnooze() async {
     _idleTimer?.cancel();
+    _verificationTimer?.cancel();
     if (_alarm != null && _alarm!.isHardcoreMode) return; // Hardcore blocks snooze!
 
     final scheduler = ref.read(alarmSchedulerProvider);
@@ -172,9 +259,10 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       _snoozes++;
     });
 
+    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
     final snoozeTime = DateTime.now().add(Duration(minutes: snoozeMins));
     await scheduler.scheduleAlarm(
-      id: widget.alarmId,
+      id: realId,
       time: snoozeTime,
       label: '${widget.label} (Snoozed)',
       soundPath: _alarm!.soundPath,
@@ -192,6 +280,146 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       return const Scaffold(
         backgroundColor: Color(0xFF0D0D14),
         body: Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
+      );
+    }
+
+    // Handle Wake-Up Verification Screen when alarmId >= 90000
+    if (_isVerificationCheck) {
+      if (_isVerificationConfirmed) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF0D0D14),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle, size: 96, color: Colors.cyanAccent),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'WAKE-UP VERIFIED!',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Great job! You confirmed check-in. Have a productive day!',
+                      style: TextStyle(color: Colors.cyanAccent, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Scaffold(
+        backgroundColor: const Color(0xFF0D0D14),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.cyanAccent.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4), width: 2),
+                    ),
+                    child: const Icon(Icons.verified_user, size: 88, color: Colors.cyanAccent),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'WAKE-UP CHECK-IN',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'ARE YOU STILL AWAKE?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.cyanAccent,
+                      letterSpacing: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.timer_outlined, color: Colors.amberAccent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Confirmation timeout: ${_verificationSecondsRemaining}s',
+                          style: const TextStyle(
+                            color: Colors.amberAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 72,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.tealAccent,
+                        foregroundColor: Colors.black,
+                        elevation: 12,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(36),
+                        ),
+                      ),
+                      onPressed: _onVerificationConfirm,
+                      child: const Text(
+                        "YES, I'M AWAKE!",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'If you do not confirm within 60 seconds, your wake-up mission will trigger automatically.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     }
 

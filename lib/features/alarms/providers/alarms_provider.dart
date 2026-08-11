@@ -85,11 +85,13 @@ class AlarmsController {
       alarm.enabled = false;
       await _isarService.saveAlarm(alarm);
       await _schedulerService.cancelAlarm(alarm.id);
+      await _schedulerService.cancelAlarm(90000 + alarm.id);
     }
   }
 
   Future<void> deleteAlarm(Alarm alarm) async {
     await _schedulerService.cancelAlarm(alarm.id);
+    await _schedulerService.cancelAlarm(90000 + alarm.id);
     await _isarService.deleteAlarm(alarm.id);
   }
 }
