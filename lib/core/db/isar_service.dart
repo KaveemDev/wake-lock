@@ -14,10 +14,14 @@ final alarmsStreamProvider = StreamProvider<List<Alarm>>((ref) async* {
   yield* isar.alarms.where().watch(fireImmediately: true);
 });
 
-final alarmHistoryStreamProvider = StreamProvider<List<AlarmHistory>>((ref) async* {
+final alarmHistoryStreamProvider = StreamProvider<List<AlarmHistory>>((
+  ref,
+) async* {
   final service = ref.watch(isarServiceProvider);
   final isar = await service.db;
-  yield* isar.alarmHistorys.where().sortByTimestampDesc().watch(fireImmediately: true);
+  yield* isar.alarmHistorys.where().sortByTimestampDesc().watch(
+    fireImmediately: true,
+  );
 });
 
 class IsarService {
@@ -30,10 +34,10 @@ class IsarService {
   Future<Isar> openDB() async {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
-      return await Isar.open(
-        [AlarmSchema, AlarmHistorySchema],
-        directory: dir.path,
-      );
+      return await Isar.open([
+        AlarmSchema,
+        AlarmHistorySchema,
+      ], directory: dir.path);
     }
     return Future.value(Isar.getInstance());
   }

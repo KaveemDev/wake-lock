@@ -2,8 +2,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AlarmSchedulerService {
-  static const MethodChannel _channel = MethodChannel('com.focusalarm.app/scheduler');
-  static const MethodChannel _ringingChannel = MethodChannel('com.focusalarm.app/ringing');
+  static const MethodChannel _channel = MethodChannel(
+    'com.focusalarm.app/scheduler',
+  );
+  static const MethodChannel _ringingChannel = MethodChannel(
+    'com.focusalarm.app/ringing',
+  );
 
   Future<bool> scheduleAlarm({
     required int id,
@@ -37,7 +41,9 @@ class AlarmSchedulerService {
 
   Future<bool> canScheduleExactAlarms() async {
     try {
-      final canSchedule = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
+      final canSchedule = await _channel.invokeMethod<bool>(
+        'canScheduleExactAlarms',
+      );
       return canSchedule ?? true;
     } catch (e) {
       return true;

@@ -24,7 +24,9 @@ class AlarmTimeUtils {
     }
 
     // Fallback in case of unexpected repeatDays values
-    return baseToday.isAfter(now) ? baseToday : baseToday.add(const Duration(days: 1));
+    return baseToday.isAfter(now)
+        ? baseToday
+        : baseToday.add(const Duration(days: 1));
   }
 
   static String formatCountdown(DateTime target, [DateTime? from]) {
@@ -79,7 +81,10 @@ class AlarmTimeUtils {
       7: 'Sun',
     };
 
-    return sorted.map((d) => dayNames[d] ?? '').where((s) => s.isNotEmpty).join(', ');
+    return sorted
+        .map((d) => dayNames[d] ?? '')
+        .where((s) => s.isNotEmpty)
+        .join(', ');
   }
 
   static String formatTime(DateTime time) {
