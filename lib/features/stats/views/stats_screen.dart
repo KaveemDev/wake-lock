@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/isar_service.dart';
+import '../../../core/ui/app_ui.dart';
 import '../../../core/utils/alarm_time_utils.dart';
 
 class StatsScreen extends ConsumerWidget {
@@ -11,134 +12,119 @@ class StatsScreen extends ConsumerWidget {
     final historyAsync = ref.watch(alarmHistoryStreamProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         title: const Text(
-          'WAKE-UP STATISTICS',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, fontSize: 18, color: Colors.white),
+          'Stats',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
-      body: historyAsync.when(
-        data: (history) {
-          if (history.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.bar_chart, size: 80, color: Colors.white.withOpacity(0.15)),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No Wake-Up History Yet',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Complete dismissal missions to build your streak & discipline score!',
-                      style: TextStyle(color: Colors.white38, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+      body: GlowBackground(
+        color: AppColors.accent2,
+        child: historyAsync.when(
+          data: (history) {
+            if (history.isEmpty) return _empty();
+
+            final total = history.length;
+            final totalSecs = history.fold<int>(
+              0,
+              (s, h) => s + h.dismissTimeSeconds,
             );
-          }
+            final avgSecs = (totalSecs / total).round();
+            final totalSnoozes = history.fold<int>(
+              0,
+              (s, h) => s + h.snoozeCount,
+            );
+            final zeroSnooze = history.where((h) => h.snoozeCount == 0).length;
+            final score = ((zeroSnooze / total) * 100).round();
 
-          final totalDismissed = history.length;
-          final totalSecs = history.fold<int>(0, (sum, item) => sum + item.dismissTimeSeconds);
-          final avgSecs = totalDismissed > 0 ? (totalSecs / totalDismissed).round() : 0;
-          final totalSnoozes = history.fold<int>(0, (sum, item) => sum + item.snoozeCount);
-          final zeroSnoozeCount = history.where((h) => h.snoozeCount == 0).length;
-          final disciplineScore = totalDismissed > 0 ? ((zeroSnoozeCount / totalDismissed) * 100).round() : 100;
+            final metrics = [
+              (
+                'Score',
+                score,
+                '%',
+                Icons.military_tech_rounded,
+                score >= 80 ? AppColors.success : AppColors.warn,
+              ),
+              (
+                'Missions done',
+                total,
+                '',
+                Icons.task_alt_rounded,
+                AppColors.accent2,
+              ),
+              (
+                'Avg. time to dismiss',
+                avgSecs,
+                's',
+                Icons.timer_rounded,
+                AppColors.accent2,
+              ),
+              (
+                'Snoozes',
+                totalSnoozes,
+                '',
+                Icons.snooze_rounded,
+                totalSnoozes == 0 ? AppColors.success : AppColors.warn,
+              ),
+            ];
 
-          return SafeArea(
-            child: Column(
-              children: [
-                // Top Metrics Grid
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 1.5,
-                    children: [
-                      _buildMetricCard(
-                        'DISCIPLINE SCORE',
-                        '$disciplineScore%',
-                        Icons.military_tech,
-                        disciplineScore >= 80 ? Colors.tealAccent : Colors.amberAccent,
+            return SafeArea(
+              child: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                itemCount: history.length + 2,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 14,
+                        crossAxisSpacing: 14,
+                        childAspectRatio: 1.45,
+                        children: [
+                          for (var i = 0; i < metrics.length; i++)
+                            FadeSlideIn(
+                              delay: FadeSlideIn.stagger(i),
+                              child: _metricCard(
+                                metrics[i].$1,
+                                metrics[i].$2,
+                                metrics[i].$3,
+                                metrics[i].$4,
+                                metrics[i].$5,
+                              ),
+                            ),
+                        ],
                       ),
-                      _buildMetricCard(
-                        'MISSIONS SOLVED',
-                        '$totalDismissed',
-                        Icons.assignment_turned_in,
-                        Colors.blueAccent,
-                      ),
-                      _buildMetricCard(
-                        'AVG DISMISS SPEED',
-                        '${avgSecs}s',
-                        Icons.timer,
-                        Colors.purpleAccent,
-                      ),
-                      _buildMetricCard(
-                        'TOTAL SNOOZES',
-                        '$totalSnoozes',
-                        Icons.snooze,
-                        totalSnoozes == 0 ? Colors.tealAccent : Colors.orangeAccent,
-                      ),
-                    ],
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'RECENT WAKE-UP LOGS',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    itemCount: history.length,
-                    itemBuilder: (context, index) {
-                      final item = history[index];
-                      final dateStr = '${item.timestamp.month}/${item.timestamp.day} at ${AlarmTimeUtils.formatTime(item.timestamp)}';
+                    );
+                  }
+                  if (index == 1) return const SectionLabel('Recent');
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                  final item = history[index - 2];
+                  final dateStr =
+                      '${item.timestamp.month}/${item.timestamp.day} at ${AlarmTimeUtils.formatTime(item.timestamp)}';
+                  final clean = item.snoozeCount == 0;
+                  return FadeSlideIn(
+                    delay: FadeSlideIn.stagger(index),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AppCard(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF181824),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withOpacity(0.06)),
-                        ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(11),
                               decoration: BoxDecoration(
-                                color: Colors.tealAccent.withOpacity(0.15),
-                                shape: BoxShape.circle,
+                                color: AppColors.accent.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Icon(Icons.alarm_on, color: Colors.tealAccent, size: 24),
+                              child: Icon(
+                                Icons.alarm_on_rounded,
+                                color: AppColors.accent,
+                                size: 22,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -147,18 +133,21 @@ class StatsScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     item.alarmLabel,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                    style: TextStyle(
+                                      color: AppColors.text,
+                                      fontWeight: FontWeight.w700,
                                       fontSize: 16,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 3),
                                   Text(
-                                    '$dateStr • Mission: ${item.missionType.toUpperCase()}',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                                    '$dateStr · ${item.missionType}',
+                                    style: TextStyle(
+                                      color: AppColors.textDim,
+                                      fontSize: 13,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -171,16 +160,20 @@ class StatsScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   '${item.dismissTimeSeconds}s',
-                                  style: const TextStyle(
-                                    color: Colors.tealAccent,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                  style: TextStyle(
+                                    color: AppColors.accent,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
                                   ),
                                 ),
                                 Text(
-                                  item.snoozeCount == 0 ? 'No snoozes' : '${item.snoozeCount} snoozed',
+                                  clean
+                                      ? 'No snoozes'
+                                      : '${item.snoozeCount} snoozed',
                                   style: TextStyle(
-                                    color: item.snoozeCount == 0 ? Colors.white38 : Colors.amberAccent,
+                                    color: clean
+                                        ? AppColors.textFaint
+                                        : AppColors.warn,
                                     fontSize: 11,
                                   ),
                                 ),
@@ -188,54 +181,106 @@ class StatsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
-        error: (err, stack) => Center(child: Text('Error loading stats: $err')),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Error loading stats: $err')),
+        ),
       ),
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF181824),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.35)),
+  Widget _empty() => Center(
+    child: FadeSlideIn(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(26),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surface,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Icon(
+                Icons.insights_rounded,
+                size: 52,
+                color: AppColors.accent2.withValues(alpha: 0.9),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'No wake-ups yet',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Finish a mission to start your score.',
+              style: TextStyle(color: AppColors.textDim, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _metricCard(
+    String title,
+    int value,
+    String suffix,
+    IconData icon,
+    Color color,
+  ) {
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      borderColor: color.withValues(alpha: 0.3),
+      gradient: LinearGradient(
+        colors: [color.withValues(alpha: 0.14), AppColors.surface],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.textDim,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 4),
-              Icon(icon, color: color, size: 18),
+              Icon(icon, color: color, size: 20),
             ],
           ),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              value,
+            child: CountUp(
+              value: value,
+              suffix: suffix,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
                 color: color,
               ),
             ),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/services/alarm_scheduler.dart';
+import '../../../core/ui/app_theme.dart';
+import '../../../core/ui/app_ui.dart';
+import '../../settings/views/theme_screen.dart';
 
 class PermissionsScreen extends ConsumerStatefulWidget {
   const PermissionsScreen({super.key});
@@ -10,7 +13,8 @@ class PermissionsScreen extends ConsumerStatefulWidget {
   ConsumerState<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with WidgetsBindingObserver {
+class _PermissionsScreenState extends ConsumerState<PermissionsScreen>
+    with WidgetsBindingObserver {
   bool _isLoading = true;
   bool _hasNotification = false;
   bool _hasExactAlarm = false;
@@ -43,7 +47,9 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
       final notifStatus = await Permission.notification.status;
       final alertStatus = await Permission.systemAlertWindow.status;
       final batteryStatus = await Permission.ignoreBatteryOptimizations.status;
-      final exactAlarm = await ref.read(alarmSchedulerProvider).canScheduleExactAlarms();
+      final exactAlarm = await ref
+          .read(alarmSchedulerProvider)
+          .canScheduleExactAlarms();
 
       if (mounted) {
         setState(() {
@@ -92,123 +98,240 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
 
   @override
   Widget build(BuildContext context) {
+    final cards = [
+      (
+        'Notifications',
+        'Shows the alarm on your lock screen.',
+        Icons.notifications_active_rounded,
+        _hasNotification,
+        _requestNotification,
+      ),
+      (
+        'Exact alarms',
+        'Rings on the minute, even when the phone is idle.',
+        Icons.alarm_on_rounded,
+        _hasExactAlarm,
+        _requestExactAlarm,
+      ),
+      (
+        'Show over other apps',
+        'Opens the mission screen as soon as the alarm goes off.',
+        Icons.layers_rounded,
+        _hasSystemAlertWindow,
+        _requestSystemAlertWindow,
+      ),
+      (
+        'Battery',
+        'Stops the phone from closing WakeLock in the background.',
+        Icons.battery_charging_full_rounded,
+        _hasBatteryExemption,
+        _requestBatteryExemption,
+      ),
+    ];
+    final grantedCount = cards.where((c) => c.$4).length;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         title: const Text(
-          'WakeLock Permissions',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          'Permissions',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.tealAccent))
-          : SafeArea(
-              child: RefreshIndicator(
-                color: Colors.tealAccent,
-                backgroundColor: const Color(0xFF181824),
-                onRefresh: _checkAllPermissions,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.teal.withOpacity(0.2),
-                              const Color(0xFF181824),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.teal.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.security, color: Colors.tealAccent, size: 36),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Why Permissions Matter',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+      body: GlowBackground(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SafeArea(
+                child: RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: AppColors.surface,
+                  onRefresh: _checkAllPermissions,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FadeSlideIn(
+                          child: AppCard(
+                            padding: const EdgeInsets.all(22),
+                            borderColor: AppColors.accent.withValues(
+                              alpha: 0.28,
+                            ),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.accent.withValues(alpha: 0.2),
+                                AppColors.accent2.withValues(alpha: 0.1),
+                                AppColors.surface,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 64,
+                                  height: 64,
+                                  child: TweenAnimationBuilder<double>(
+                                    tween: Tween(
+                                      begin: 0,
+                                      end: grantedCount / cards.length,
+                                    ),
+                                    duration: const Duration(milliseconds: 900),
+                                    curve: Curves.easeOutCubic,
+                                    builder: (_, v, _) => Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        SizedBox.expand(
+                                          child: CircularProgressIndicator(
+                                            value: v,
+                                            strokeWidth: 5,
+                                            strokeCap: StrokeCap.round,
+                                            backgroundColor: AppColors.border,
+                                            color: v == 1
+                                                ? AppColors.accent
+                                                : AppColors.warn,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$grantedCount/${cards.length}',
+                                          style: TextStyle(
+                                            color: AppColors.text,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 4),
+                                ),
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        grantedCount == cards.length
+                                            ? 'All set. Alarms will ring.'
+                                            : 'Why these matter',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.text,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Allow these so alarms still ring when your phone is locked.',
+                                        style: TextStyle(
+                                          color: AppColors.textDim,
+                                          fontSize: 13,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        for (var i = 0; i < cards.length; i++)
+                          FadeSlideIn(
+                            delay: FadeSlideIn.stagger(i + 1),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _buildPermissionCard(
+                                title: cards[i].$1,
+                                description: cards[i].$2,
+                                icon: cards[i].$3,
+                                isGranted: cards[i].$4,
+                                onRequest: cards[i].$5,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        FadeSlideIn(
+                          delay: FadeSlideIn.stagger(5),
+                          child: AppCard(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ThemeScreen(),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Theme',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.text,
+                                    ),
+                                  ),
+                                ),
+                                ValueListenableBuilder(
+                                  valueListenable: ThemeController.instance,
+                                  builder: (_, t, _) => Text(
+                                    '${themeModeLabel(t.mode)} · ${accentOptions[t.accent].name}',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: AppColors.textDim,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: AppColors.textDim,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FadeSlideIn(
+                          delay: FadeSlideIn.stagger(6),
+                          child: Pressable(
+                            onTap: () async => await openAppSettings(),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceHi,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.settings_rounded,
+                                    size: 20,
+                                    color: AppColors.accent,
+                                  ),
+                                  SizedBox(width: 10),
                                   Text(
-                                    'To guarantee WakeLock rings loudly when your screen is locked or phone is asleep, all permissions below should be granted.',
-                                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, height: 1.4),
+                                    'Open app settings',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.6,
+                                      color: AppColors.text,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      _buildPermissionCard(
-                        title: 'Notification Permission',
-                        description: 'Displays high-priority foreground alarms and verification countdowns on your lock screen.',
-                        icon: Icons.notifications_active,
-                        isGranted: _hasNotification,
-                        onRequest: _requestNotification,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildPermissionCard(
-                        title: 'Exact Alarms & Reminders',
-                        description: 'Ensures alarms fire at the precise second without delay from Android Doze mode.',
-                        icon: Icons.alarm_on,
-                        isGranted: _hasExactAlarm,
-                        onRequest: _requestExactAlarm,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildPermissionCard(
-                        title: 'Display Over Other Apps',
-                        description: 'Required to open the full-screen mission solver immediately when the alarm triggers over the lock screen.',
-                        icon: Icons.layers,
-                        isGranted: _hasSystemAlertWindow,
-                        onRequest: _requestSystemAlertWindow,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildPermissionCard(
-                        title: 'Ignore Battery Optimizations',
-                        description: 'Prevents device manufacturers (ColorOS, MIUI, Samsung Doze) from killing the background wake service.',
-                        icon: Icons.battery_charging_full,
-                        isGranted: _hasBatteryExemption,
-                        onRequest: _requestBatteryExemption,
-                      ),
-                      const SizedBox(height: 24),
-
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF252538),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        icon: const Icon(Icons.settings, size: 20, color: Colors.tealAccent),
-                        label: const Text('OPEN SYSTEM APP SETTINGS', style: TextStyle(fontWeight: FontWeight.bold)),
-                        onPressed: () async {
-                          await openAppSettings();
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -219,15 +342,9 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
     required bool isGranted,
     required VoidCallback onRequest,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF181824),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isGranted ? Colors.tealAccent.withOpacity(0.4) : Colors.amberAccent.withOpacity(0.4),
-        ),
-      ),
+    final color = isGranted ? AppColors.success : AppColors.warn;
+    return AppCard(
+      borderColor: color.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,10 +353,10 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (isGranted ? Colors.tealAccent : Colors.amberAccent).withOpacity(0.15),
-                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: isGranted ? Colors.tealAccent : Colors.amberAccent, size: 24),
+                child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -248,25 +365,24 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
+                        fontSize: 16,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (isGranted ? Colors.tealAccent : Colors.amberAccent).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isGranted ? 'GRANTED' : 'ACTION REQUIRED',
-                        style: TextStyle(
-                          color: isGranted ? Colors.tealAccent : Colors.amberAccent,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                          letterSpacing: 0.5,
-                        ),
+                    const SizedBox(height: 5),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Tag(
+                        isGranted ? 'Allowed' : 'Needed',
+                        key: ValueKey(isGranted),
+                        color: color,
+                        icon: isGranted
+                            ? Icons.check_circle_rounded
+                            : Icons.error_outline_rounded,
                       ),
                     ),
                   ],
@@ -277,24 +393,28 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> with Widg
           const SizedBox(height: 12),
           Text(
             description,
-            style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
-          ),
-          if (!isGranted) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amberAccent,
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: onRequest,
-                child: const Text('GRANT PERMISSION', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8)),
-              ),
+            style: TextStyle(
+              color: AppColors.textDim,
+              fontSize: 13,
+              height: 1.45,
             ),
-          ],
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: isGranted
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: GradientButton(
+                      label: 'Allow',
+                      height: 46,
+                      colors: AppColors.sunrise,
+                      onPressed: onRequest,
+                    ),
+                  ),
+          ),
         ],
       ),
     );
