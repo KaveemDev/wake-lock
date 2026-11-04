@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/db/models/alarm.dart';
+import '../../../core/ui/app_ui.dart';
 import '../../../core/utils/alarm_time_utils.dart';
 import '../../missions/models/mission.dart';
 import '../providers/alarms_provider.dart';
@@ -37,7 +38,10 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     super.initState();
     final alarm = widget.existingAlarm;
     if (alarm != null) {
-      _selectedTime = TimeOfDay(hour: alarm.time.hour, minute: alarm.time.minute);
+      _selectedTime = TimeOfDay(
+        hour: alarm.time.hour,
+        minute: alarm.time.minute,
+      );
       _labelController = TextEditingController(text: alarm.label);
       _selectedDays = Set<int>.from(alarm.repeatDays);
       _vibrate = alarm.vibrate;
@@ -57,7 +61,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       _selectedDays = {};
       _vibrate = true;
       _snoozeMinutes = 5;
-      _soundName = 'Default System Alarm';
+      _soundName = 'Phone default';
       _soundPath = null;
       _missionType = 'math';
       _missionDifficulty = 'medium';
@@ -92,8 +96,10 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             timePickerTheme: TimePickerThemeData(
-              backgroundColor: const Color(0xFF181824),
-              hourMinuteShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: AppColors.surface,
+              hourMinuteShape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           child: child!,
@@ -109,9 +115,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   Future<void> _pickCustomAudioFile() async {
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.audio,
-      );
+      final result = await FilePicker.pickFiles(type: FileType.audio);
       if (result != null && result.files.single.path != null) {
         final tempPath = result.files.single.path!;
         final fileName = result.files.single.name;
@@ -120,7 +124,9 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
         if (!await customSoundsDir.exists()) {
           await customSoundsDir.create(recursive: true);
         }
-        final savedFile = await File(tempPath).copy('${customSoundsDir.path}/$fileName');
+        final savedFile = await File(
+          tempPath,
+        ).copy('${customSoundsDir.path}/$fileName');
         setState(() {
           _soundPath = savedFile.path;
           _soundName = fileName;
@@ -131,7 +137,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not pick audio file: $e'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -140,16 +146,16 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   void _showSoundPicker() {
     final builtInSounds = [
-      'Default System Alarm',
-      'Radar (Loud & Urgent)',
-      'Beacon (Electronic)',
-      'Circuit (Digital Pulse)',
-      'Chimes (Gentle Wake)',
+      'Phone default',
+      'Radar',
+      'Beacon',
+      'Circuit',
+      'Chimes',
     ];
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF181824),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -159,20 +165,35 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Text(
-                    'Select Alarm Sound',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    'Sound',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                Divider(height: 1, color: AppColors.border),
                 ListTile(
-                  leading: const Icon(Icons.folder_open, color: Colors.tealAccent),
-                  title: const Text('Pick Custom Audio File...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.folder_open,
+                    color: AppColors.accent,
+                  ),
+                  title: Text(
+                    'Pick a file',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   subtitle: Text(
-                    _soundPath != null ? 'Selected: $_soundName' : 'Browse MP3, WAV, OGG from device',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    _soundPath != null
+                        ? 'Selected: $_soundName'
+                        : 'MP3, WAV or OGG from your phone',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -181,14 +202,25 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                     await _pickCustomAudioFile();
                   },
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                Divider(height: 1, color: AppColors.border),
                 ...builtInSounds.map((sound) {
                   final isSelected = _soundName == sound && _soundPath == null;
                   return ListTile(
-                    leading: Icon(Icons.music_note, color: isSelected ? Colors.tealAccent : Colors.white54),
-                    title: Text(sound, style: TextStyle(color: isSelected ? Colors.tealAccent : Colors.white)),
+                    leading: Icon(
+                      Icons.music_note,
+                      color: isSelected ? AppColors.accent : AppColors.textDim,
+                    ),
+                    title: Text(
+                      sound,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.accent : AppColors.text,
+                      ),
+                    ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                        ? Icon(
+                            Icons.check_circle,
+                            color: AppColors.accent,
+                          )
                         : null,
                     onTap: () {
                       setState(() {
@@ -212,7 +244,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     final options = [0, 5, 10, 15, 20];
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF181824),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -221,21 +253,30 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Text(
-                  'Select Snooze Duration',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  'Snooze',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: AppColors.border),
               ...options.map((mins) {
-                final text = mins == 0 ? 'Off (No Snooze)' : '$mins minutes';
+                final text = mins == 0 ? 'Off' : '$mins minutes';
                 final isSelected = _snoozeMinutes == mins;
                 return ListTile(
-                  title: Text(text, style: TextStyle(color: isSelected ? Colors.tealAccent : Colors.white)),
+                  title: Text(
+                    text,
+                    style: TextStyle(
+                      color: isSelected ? AppColors.accent : AppColors.text,
+                    ),
+                  ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                      ? Icon(Icons.check_circle, color: AppColors.accent)
                       : null,
                   onTap: () {
                     setState(() {
@@ -257,7 +298,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     final options = [1, 3, 5, 10, 15];
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF181824),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -266,28 +307,37 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Text(
-                  'Follow-Up Check Duration',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  'Check-in after',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                 child: Text(
-                  'After dismissing the alarm, WakeLock will ask you to confirm you are still awake after this duration.',
-                  style: TextStyle(fontSize: 13, color: Colors.white54),
+                  'After you dismiss the alarm, WakeLock asks if you\'re still up after this long.',
+                  style: TextStyle(fontSize: 13, color: AppColors.textDim),
                   textAlign: TextAlign.center,
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: AppColors.border),
               ...options.map((mins) {
                 final isSelected = _verificationMinutes == mins;
                 return ListTile(
-                  title: Text('$mins minutes after dismissal', style: TextStyle(color: isSelected ? Colors.tealAccent : Colors.white)),
+                  title: Text(
+                    '$mins minutes after dismissal',
+                    style: TextStyle(
+                      color: isSelected ? AppColors.accent : AppColors.text,
+                    ),
+                  ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                      ? Icon(Icons.check_circle, color: AppColors.accent)
                       : null,
                   onTap: () {
                     setState(() {
@@ -317,7 +367,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF181824),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -327,21 +377,39 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Text(
-                    'Select Dismissal Mission',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    'Mission to turn it off',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                Divider(height: 1, color: AppColors.border),
                 ...missions.map((cfg) {
                   final isSelected = _missionType == cfg.type;
                   return ListTile(
-                    title: Text(cfg.displayName, style: TextStyle(color: isSelected ? Colors.tealAccent : Colors.white)),
-                    subtitle: Text(cfg.description, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                    title: Text(
+                      cfg.displayName,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.accent : AppColors.text,
+                      ),
+                    ),
+                    subtitle: Text(
+                      cfg.description,
+                      style: TextStyle(
+                        color: AppColors.textDim,
+                        fontSize: 13,
+                      ),
+                    ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                        ? Icon(
+                            Icons.check_circle,
+                            color: AppColors.accent,
+                          )
                         : null,
                     onTap: () {
                       setState(() {
@@ -372,7 +440,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
   void _showDynamicMissionOptionsSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF181824),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -388,18 +456,29 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                   children: [
                     Text(
                       '${_getMissionTitle(_missionType)} Configuration',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-                    const Divider(color: Colors.white12),
+                    Divider(color: AppColors.border),
                     const SizedBox(height: 12),
 
                     // Difficulty selector (for math, shake, memory)
-                    if (_missionType == 'math' || _missionType == 'shake' || _missionType == 'memory') ...[
-                      const Text(
-                        'DIFFICULTY LEVEL',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                    if (_missionType == 'math' ||
+                        _missionType == 'shake' ||
+                        _missionType == 'memory') ...[
+                      Text(
+                        'Difficulty',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -407,22 +486,28 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                           final isSelected = _missionDifficulty == diff;
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: ChoiceChip(
                                 label: Text(
-                                  diff.toUpperCase(),
+                                  diff,
                                   style: TextStyle(
-                                    color: isSelected ? Colors.black : Colors.white,
+                                    color: isSelected
+                                        ? AppColors.onAccent
+                                        : AppColors.text,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
                                 ),
                                 selected: isSelected,
-                                selectedColor: Colors.tealAccent,
-                                backgroundColor: const Color(0xFF252538),
+                                selectedColor: AppColors.accent,
+                                backgroundColor: AppColors.surfaceHi,
                                 onSelected: (selected) {
                                   if (selected) {
-                                    setSheetState(() => _missionDifficulty = diff);
+                                    setSheetState(
+                                      () => _missionDifficulty = diff,
+                                    );
                                     setState(() => _missionDifficulty = diff);
                                   }
                                 },
@@ -435,11 +520,15 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                         const SizedBox(height: 8),
                         Text(
                           _missionDifficulty == 'easy'
-                              ? 'Single Digit Addition & Subtraction (e.g. 7 + 4 or 8 - 3)'
+                              ? 'Example: 7 + 4'
                               : _missionDifficulty == 'medium'
-                                  ? '2-Digit Addition & Subtraction (e.g. 45 + 32 or 78 - 19)'
-                                  : 'Multi-Digit & Mixed Expressions (e.g. 15 × 12 + 30)',
-                          style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontStyle: FontStyle.italic),
+                              ? '2-Digit Addition & Subtraction (e.g. 45 + 32 or 78 - 19)'
+                              : 'Example: 15 × 12 + 30',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -448,120 +537,170 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
                     // Target / Count selector based on mission type
                     if (_missionType == 'math') ...[
-                      const Text(
-                        'NUMBER OF MATH PROBLEMS',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                      Text(
+                        'Problems',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
-                        children: [1, 2, 3, 4, 5].map((num) {
-                          final isSelected = _missionCount == num;
+                        children: [1, 2, 3, 4, 5].map((count) {
+                          final isSelected = _missionCount == count;
                           return ChoiceChip(
-                            label: Text('$num Problems', style: TextStyle(color: isSelected ? Colors.black : Colors.white)),
+                            label: Text(
+                              '$count Problems',
+                              style: TextStyle(
+                                color: isSelected ? AppColors.onAccent : AppColors.text,
+                              ),
+                            ),
                             selected: isSelected,
-                            selectedColor: Colors.tealAccent,
-                            backgroundColor: const Color(0xFF252538),
+                            selectedColor: AppColors.accent,
+                            backgroundColor: AppColors.surfaceHi,
                             onSelected: (selected) {
                               if (selected) {
-                                setSheetState(() => _missionCount = num);
-                                setState(() => _missionCount = num);
+                                setSheetState(() => _missionCount = count);
+                                setState(() => _missionCount = count);
                               }
                             },
                           );
                         }).toList(),
                       ),
                     ] else if (_missionType == 'shake') ...[
-                      const Text(
-                        'TARGET SHAKES REQUIRED',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                      Text(
+                        'Shakes',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
-                        children: [15, 30, 50, 75].map((num) {
-                          final isSelected = _missionCount == num;
+                        children: [15, 30, 50, 75].map((count) {
+                          final isSelected = _missionCount == count;
                           return ChoiceChip(
-                            label: Text('$num Shakes', style: TextStyle(color: isSelected ? Colors.black : Colors.white)),
+                            label: Text(
+                              '$count Shakes',
+                              style: TextStyle(
+                                color: isSelected ? AppColors.onAccent : AppColors.text,
+                              ),
+                            ),
                             selected: isSelected,
-                            selectedColor: Colors.tealAccent,
-                            backgroundColor: const Color(0xFF252538),
+                            selectedColor: AppColors.accent,
+                            backgroundColor: AppColors.surfaceHi,
                             onSelected: (selected) {
                               if (selected) {
-                                setSheetState(() => _missionCount = num);
-                                setState(() => _missionCount = num);
+                                setSheetState(() => _missionCount = count);
+                                setState(() => _missionCount = count);
                               }
                             },
                           );
                         }).toList(),
                       ),
                     ] else if (_missionType == 'typing') ...[
-                      const Text(
-                        'NUMBER OF QUOTES TO TYPE',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                      Text(
+                        'Phrases',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
-                        children: [1, 2, 3].map((num) {
-                          final isSelected = _missionCount == num;
+                        children: [1, 2, 3].map((count) {
+                          final isSelected = _missionCount == count;
                           return ChoiceChip(
-                            label: Text('$num Quotes', style: TextStyle(color: isSelected ? Colors.black : Colors.white)),
+                            label: Text(
+                              '$count Quotes',
+                              style: TextStyle(
+                                color: isSelected ? AppColors.onAccent : AppColors.text,
+                              ),
+                            ),
                             selected: isSelected,
-                            selectedColor: Colors.tealAccent,
-                            backgroundColor: const Color(0xFF252538),
+                            selectedColor: AppColors.accent,
+                            backgroundColor: AppColors.surfaceHi,
                             onSelected: (selected) {
                               if (selected) {
-                                setSheetState(() => _missionCount = num);
-                                setState(() => _missionCount = num);
+                                setSheetState(() => _missionCount = count);
+                                setState(() => _missionCount = count);
                               }
                             },
                           );
                         }).toList(),
                       ),
                     ] else if (_missionType == 'memory') ...[
-                      const Text(
-                        'SEQUENCE ROUNDS TO REPEAT',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                      Text(
+                        'Rounds',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
-                        children: [3, 4, 5].map((num) {
-                          final isSelected = _missionCount == num;
+                        children: [3, 4, 5].map((count) {
+                          final isSelected = _missionCount == count;
                           return ChoiceChip(
-                            label: Text('$num Rounds', style: TextStyle(color: isSelected ? Colors.black : Colors.white)),
+                            label: Text(
+                              '$count Rounds',
+                              style: TextStyle(
+                                color: isSelected ? AppColors.onAccent : AppColors.text,
+                              ),
+                            ),
                             selected: isSelected,
-                            selectedColor: Colors.tealAccent,
-                            backgroundColor: const Color(0xFF252538),
+                            selectedColor: AppColors.accent,
+                            backgroundColor: AppColors.surfaceHi,
                             onSelected: (selected) {
                               if (selected) {
-                                setSheetState(() => _missionCount = num);
-                                setState(() => _missionCount = num);
+                                setSheetState(() => _missionCount = count);
+                                setState(() => _missionCount = count);
                               }
                             },
                           );
                         }).toList(),
                       ),
                     ] else if (_missionType == 'step') ...[
-                      const Text(
-                        'TARGET WALKING STEPS',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                      Text(
+                        'Steps',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
-                        children: [10, 20, 30, 50].map((num) {
-                          final isSelected = _missionCount == num;
+                        children: [10, 20, 30, 50].map((count) {
+                          final isSelected = _missionCount == count;
                           return ChoiceChip(
-                            label: Text('$num Steps', style: TextStyle(color: isSelected ? Colors.black : Colors.white)),
+                            label: Text(
+                              '$count Steps',
+                              style: TextStyle(
+                                color: isSelected ? AppColors.onAccent : AppColors.text,
+                              ),
+                            ),
                             selected: isSelected,
-                            selectedColor: Colors.tealAccent,
-                            backgroundColor: const Color(0xFF252538),
+                            selectedColor: AppColors.accent,
+                            backgroundColor: AppColors.surfaceHi,
                             onSelected: (selected) {
                               if (selected) {
-                                setSheetState(() => _missionCount = num);
-                                setState(() => _missionCount = num);
+                                setSheetState(() => _missionCount = count);
+                                setState(() => _missionCount = count);
                               }
                             },
                           );
@@ -572,13 +711,21 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.tealAccent,
-                        foregroundColor: Colors.black,
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('DONE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -592,23 +739,41 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   String _getMissionTitle(String type) {
     switch (type) {
-      case 'math': return 'Math Challenge';
-      case 'shake': return 'Shake Challenge';
-      case 'typing': return 'Typing Challenge';
-      case 'memory': return 'Memory Grid';
-      case 'step': return 'Step Counter';
-      default: return 'No Mission';
+      case 'math':
+        return 'Math';
+      case 'shake':
+        return 'Shake';
+      case 'typing':
+        return 'Typing';
+      case 'memory':
+        return 'Memory';
+      case 'step':
+        return 'Steps';
+      default:
+        return 'None';
     }
   }
 
   String _getMissionSubtitle() {
-    if (_missionType == 'none') return 'Tap to dismiss instantly';
-    if (_missionType == 'math') return '${_missionCount} problems (${_missionDifficulty.toUpperCase()})';
-    if (_missionType == 'shake') return '${_missionCount} shakes (${_missionDifficulty.toUpperCase()})';
-    if (_missionType == 'typing') return '${_missionCount} quotes';
-    if (_missionType == 'memory') return '${_missionCount} rounds (${_missionDifficulty.toUpperCase()})';
-    if (_missionType == 'step') return '${_missionCount} steps';
-    return '${_missionCount} tasks (${_missionDifficulty.toUpperCase()})';
+    if (_missionType == 'none') {
+      return 'Tap to stop';
+    }
+    if (_missionType == 'math') {
+      return '$_missionCount problems ($_missionDifficulty)';
+    }
+    if (_missionType == 'shake') {
+      return '$_missionCount shakes ($_missionDifficulty)';
+    }
+    if (_missionType == 'typing') {
+      return '$_missionCount quotes';
+    }
+    if (_missionType == 'memory') {
+      return '$_missionCount rounds ($_missionDifficulty)';
+    }
+    if (_missionType == 'step') {
+      return '$_missionCount steps';
+    }
+    return '$_missionCount tasks ($_missionDifficulty)';
   }
 
   @override
@@ -619,23 +784,38 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
       repeatDays: _selectedDays.toList(),
     );
     final countdownText = AlarmTimeUtils.formatCountdown(nextRingTime);
-    final missionCfg = MissionConfig(type: _missionType, difficulty: _missionDifficulty, count: _missionCount);
+    final missionCfg = MissionConfig(
+      type: _missionType,
+      difficulty: _missionDifficulty,
+      count: _missionCount,
+    );
+    final isEdit = widget.existingAlarm != null;
+
+    // Staggered entrance: each section gets a slightly later delay.
+    var step = 0;
+    Widget section(Widget child) => FadeSlideIn(
+      delay: FadeSlideIn.stagger(step++),
+      child: Padding(padding: const EdgeInsets.only(bottom: 12), child: child),
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         title: Text(
-          widget.existingAlarm == null ? 'Create WakeLock Alarm' : 'Edit WakeLock Alarm',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          isEdit ? 'Edit alarm' : 'New alarm',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
         actions: [
-          if (widget.existingAlarm != null)
+          if (isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.danger,
+              ),
+              tooltip: 'Delete alarm',
               onPressed: () async {
-                await ref.read(alarmsControllerProvider).deleteAlarm(widget.existingAlarm!);
+                await ref
+                    .read(alarmsControllerProvider)
+                    .deleteAlarm(widget.existingAlarm!);
                 if (context.mounted) {
                   Navigator.pop(context);
                 }
@@ -643,300 +823,344 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Time Selector Card
-                    GestureDetector(
-                      onTap: _pickTime,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.teal.withOpacity(0.25),
-                              const Color(0xFF181824),
+      body: GlowBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Time card
+                      section(
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: AppCard(
+                            onTap: _pickTime,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 30,
+                              horizontal: 20,
+                            ),
+                            borderColor: AppColors.accent.withValues(
+                              alpha: 0.3,
+                            ),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.accent.withValues(alpha: 0.2),
+                                AppColors.accent2.withValues(alpha: 0.12),
+                                AppColors.surface,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shadows: [
+                              BoxShadow(
+                                color: AppColors.accent.withValues(alpha: 0.10),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
                             ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.teal.withOpacity(0.4)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.teal.withOpacity(0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                            child: Column(
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (c, a) => FadeTransition(
+                                    opacity: a,
+                                    child: ScaleTransition(
+                                      scale: Tween(
+                                        begin: 0.92,
+                                        end: 1.0,
+                                      ).animate(a),
+                                      child: c,
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    key: ValueKey(_selectedTime),
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      _selectedTime.format(context),
+                                      style: TextStyle(
+                                        fontSize: 68,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.text,
+                                        letterSpacing: 0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  child: Container(
+                                    key: ValueKey(countdownText),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 7,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.bg.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      countdownText,
+                                      style: TextStyle(
+                                        color: AppColors.accent,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap to change',
+                                  style: TextStyle(
+                                    color: AppColors.textFaint,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                        child: Column(
+                      ),
+
+                      // Repeat days
+                      section(
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                _selectedTime.format(context),
-                                style: const TextStyle(
-                                  fontSize: 64,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.4),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                countdownText,
-                                style: const TextStyle(
-                                  color: Colors.tealAccent,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
+                            const SectionLabel('Repeat'),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildDayPill(1, 'M'),
+                                _buildDayPill(2, 'T'),
+                                _buildDayPill(3, 'W'),
+                                _buildDayPill(4, 'T'),
+                                _buildDayPill(5, 'F'),
+                                _buildDayPill(6, 'S'),
+                                _buildDayPill(7, 'S'),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
 
-                    // Repeat Days Pill Row
-                    const Text(
-                      'REPEAT DAYS',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildDayPill(1, 'M'),
-                        _buildDayPill(2, 'T'),
-                        _buildDayPill(3, 'W'),
-                        _buildDayPill(4, 'T'),
-                        _buildDayPill(5, 'F'),
-                        _buildDayPill(6, 'S'),
-                        _buildDayPill(7, 'S'),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Label Input
-                    Material(
-                      color: const Color(0xFF181824),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        child: TextField(
-                          controller: _labelController,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            icon: Icon(Icons.label_outline, color: Colors.tealAccent),
-                            hintText: 'Alarm Label (e.g. Wake Up)',
-                            hintStyle: TextStyle(color: Colors.white38),
+                      // Label
+                      section(
+                        AppCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 2,
+                          ),
+                          child: TextField(
+                            controller: _labelController,
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 16,
+                            ),
+                            cursorColor: AppColors.accent,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              icon: Icon(
+                                Icons.edit_note_rounded,
+                                color: AppColors.accent,
+                              ),
+                              hintText: 'Label',
+                              hintStyle: TextStyle(color: AppColors.textFaint),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
 
-                    // Mission Selector
-                    _buildTile(
-                      icon: Icons.assignment_turned_in,
-                      title: 'Dismissal Mission',
-                      subtitle: missionCfg.displayName,
-                      onTap: _showMissionPicker,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Dynamic Mission Options Tile (If mission != none)
-                    if (_missionType != 'none') ...[
-                      _buildTile(
-                        icon: Icons.tune,
-                        title: 'Mission Configuration',
-                        subtitle: _getMissionSubtitle(),
-                        onTap: _showDynamicMissionOptionsSheet,
+                      section(
+                        _buildTile(
+                          icon: Icons.assignment_turned_in_rounded,
+                          title: 'Mission',
+                          subtitle: missionCfg.displayName,
+                          onTap: _showMissionPicker,
+                        ),
                       ),
-                      const SizedBox(height: 12),
+
+                      // Collapses in/out when mission is "none"
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        alignment: Alignment.topCenter,
+                        child: _missionType == 'none'
+                            ? const SizedBox(width: double.infinity)
+                            : section(
+                                _buildTile(
+                                  icon: Icons.tune_rounded,
+                                  title: 'Mission settings',
+                                  subtitle: _getMissionSubtitle(),
+                                  onTap: _showDynamicMissionOptionsSheet,
+                                ),
+                              ),
+                      ),
+
+                      section(
+                        _buildTile(
+                          icon: Icons.music_note_rounded,
+                          title: 'Sound',
+                          subtitle: _soundPath != null
+                              ? 'Custom: $_soundName'
+                              : _soundName,
+                          onTap: _showSoundPicker,
+                        ),
+                      ),
+
+                      section(
+                        _buildTile(
+                          icon: Icons.snooze_rounded,
+                          title: 'Snooze',
+                          subtitle: _snoozeMinutes == 0
+                              ? 'Off'
+                              : 'Every $_snoozeMinutes minutes',
+                          onTap: _showSnoozePicker,
+                        ),
+                      ),
+
+                      section(
+                        _buildSwitchTile(
+                          icon: Icons.local_fire_department_rounded,
+                          color: AppColors.danger,
+                          title: 'Hardcore',
+                          subtitle: 'No snooze. Volume stays at max.',
+                          value: _isHardcoreMode,
+                          onChanged: (v) => setState(() => _isHardcoreMode = v),
+                        ),
+                      ),
+
+                      section(
+                        AppCard(
+                          padding: EdgeInsets.zero,
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.topCenter,
+                            child: Column(
+                              children: [
+                                _switchRow(
+                                  icon: Icons.verified_user_rounded,
+                                  color: AppColors.accent,
+                                  title: 'Check-in',
+                                  subtitle:
+                                      'Asks if you\'re up after you dismiss',
+                                  value: _isVerificationRequired,
+                                  onChanged: (v) => setState(
+                                    () => _isVerificationRequired = v,
+                                  ),
+                                ),
+                                if (_isVerificationRequired) ...[
+                                  const Divider(),
+                                  InkWell(
+                                    onTap: _showVerificationDurationPicker,
+                                    borderRadius: const BorderRadius.vertical(
+                                      bottom: Radius.circular(22),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 14,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.timer_outlined,
+                                            size: 20,
+                                            color: AppColors.accent,
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Text(
+                                              'Check in after $_verificationMinutes minutes',
+                                              style: TextStyle(
+                                                color: AppColors.accent,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.edit_rounded,
+                                            size: 16,
+                                            color: AppColors.textFaint,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      section(
+                        _buildSwitchTile(
+                          icon: Icons.vibration_rounded,
+                          color: AppColors.accent2,
+                          title: 'Vibrate',
+                          subtitle: 'Pulses while ringing',
+                          value: _vibrate,
+                          onChanged: (v) => setState(() => _vibrate = v),
+                        ),
+                      ),
                     ],
-
-                    // Sound Selector Tile
-                    _buildTile(
-                      icon: Icons.music_note,
-                      title: 'Alarm Sound',
-                      subtitle: _soundPath != null ? 'Custom: $_soundName' : _soundName,
-                      onTap: _showSoundPicker,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Snooze Duration Tile
-                    _buildTile(
-                      icon: Icons.snooze,
-                      title: 'Snooze',
-                      subtitle: _snoozeMinutes == 0
-                          ? 'Off'
-                          : 'Every $_snoozeMinutes minutes',
-                      onTap: _showSnoozePicker,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Hardcore Mode Switch Tile
-                    Material(
-                      color: const Color(0xFF181824),
-                      borderRadius: BorderRadius.circular(16),
-                      child: SwitchListTile(
-                        value: _isHardcoreMode,
-                        activeColor: Colors.redAccent,
-                        onChanged: (val) {
-                          setState(() {
-                            _isHardcoreMode = val;
-                          });
-                        },
-                        secondary: const Icon(Icons.local_fire_department, color: Colors.redAccent),
-                        title: const Text('Hardcore Mode', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                        subtitle: const Text(
-                          'Locks snooze & volume during ring',
-                          style: TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Wake-Up Verification Switch Tile
-                    Material(
-                      color: const Color(0xFF181824),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Column(
-                        children: [
-                          SwitchListTile(
-                            value: _isVerificationRequired,
-                            activeColor: Colors.tealAccent,
-                            onChanged: (val) {
-                              setState(() {
-                                _isVerificationRequired = val;
-                              });
-                            },
-                            secondary: const Icon(Icons.verified_user, color: Colors.tealAccent),
-                            title: const Text('Wake-Up Verification', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                            subtitle: const Text(
-                              'Follow-up check-in to confirm awake',
-                              style: TextStyle(color: Colors.white54, fontSize: 13),
-                            ),
-                          ),
-                          if (_isVerificationRequired) ...[
-                            const Divider(height: 1, color: Colors.white12),
-                            ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-                              leading: const Icon(Icons.timer_outlined, size: 20, color: Colors.tealAccent),
-                              title: const Text('Check-In Delay', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                              subtitle: Text(
-                                'Check in after $_verificationMinutes minutes',
-                                style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                              trailing: const Icon(Icons.edit, size: 16, color: Colors.white38),
-                              onTap: _showVerificationDurationPicker,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Vibration Toggle Tile
-                    Material(
-                      color: const Color(0xFF181824),
-                      borderRadius: BorderRadius.circular(16),
-                      child: SwitchListTile(
-                        value: _vibrate,
-                        activeColor: Colors.tealAccent,
-                        onChanged: (val) {
-                          setState(() {
-                            _vibrate = val;
-                          });
-                        },
-                        secondary: const Icon(Icons.vibration, color: Colors.tealAccent),
-                        title: const Text('Vibrate While Ringing', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                        subtitle: const Text(
-                          'Pulsing vibration pattern',
-                          style: TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Bottom Action Bar
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141420),
-                border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.tealAccent,
-                    foregroundColor: Colors.black,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () async {
-                    await ref.read(alarmsControllerProvider).saveOrUpdateAlarm(
-                      existingId: widget.existingAlarm?.id,
-                      hour: _selectedTime.hour,
-                      minute: _selectedTime.minute,
-                      label: _labelController.text,
-                      repeatDays: _selectedDays.toList(),
-                      vibrate: _vibrate,
-                      snoozeDurationMinutes: _snoozeMinutes,
-                      soundName: _soundName,
-                      soundPath: _soundPath,
-                      missionType: _missionType,
-                      missionDifficulty: _missionDifficulty,
-                      missionCount: _missionCount,
-                      isHardcoreMode: _isHardcoreMode,
-                      isVerificationRequired: _isVerificationRequired,
-                      verificationDurationMinutes: _verificationMinutes,
-                    );
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text(
-                    widget.existingAlarm == null ? 'SAVE ALARM' : 'UPDATE ALARM',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+
+              // Bottom action bar
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 400),
+                offset: const Offset(0, 40),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.bg.withValues(alpha: 0.92),
+                    border: Border(top: BorderSide(color: AppColors.border)),
+                  ),
+                  child: GradientButton(
+                    label: isEdit ? 'Save' : 'Save',
+                    icon: Icons.check_rounded,
+                    onPressed: () async {
+                      await ref
+                          .read(alarmsControllerProvider)
+                          .saveOrUpdateAlarm(
+                            existingId: widget.existingAlarm?.id,
+                            hour: _selectedTime.hour,
+                            minute: _selectedTime.minute,
+                            label: _labelController.text,
+                            repeatDays: _selectedDays.toList(),
+                            vibrate: _vibrate,
+                            snoozeDurationMinutes: _snoozeMinutes,
+                            soundName: _soundName,
+                            soundPath: _soundPath,
+                            missionType: _missionType,
+                            missionDifficulty: _missionDifficulty,
+                            missionCount: _missionCount,
+                            isHardcoreMode: _isHardcoreMode,
+                            isVerificationRequired: _isVerificationRequired,
+                            verificationDurationMinutes: _verificationMinutes,
+                          );
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -944,37 +1168,105 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   Widget _buildDayPill(int dayIndex, String letter) {
     final isSelected = _selectedDays.contains(dayIndex);
-    return GestureDetector(
+    return Pressable(
       onTap: () => _toggleDay(dayIndex),
+      scale: 0.85,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutBack,
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.tealAccent : const Color(0xFF181824),
+          color: isSelected ? AppColors.accent : AppColors.surface,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? Colors.tealAccent : Colors.white.withOpacity(0.12),
+            color: isSelected ? AppColors.accent : AppColors.border,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.tealAccent.withOpacity(0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  )
-                ]
-              : [],
         ),
         alignment: Alignment.center,
-        child: Text(
-          letter,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
           style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white70,
-            fontWeight: FontWeight.bold,
+            color: isSelected ? AppColors.onAccent : AppColors.textDim,
+            fontWeight: FontWeight.w800,
             fontSize: 15,
           ),
+          child: Text(letter),
         ),
+      ),
+    );
+  }
+
+  Widget _iconBadge(IconData icon, Color color) => Container(
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Icon(icon, color: color, size: 22),
+  );
+
+  Widget _switchRow({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 12, 12),
+      child: Row(
+        children: [
+          _iconBadge(icon, color),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppColors.textDim,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      borderColor: value ? color.withValues(alpha: 0.35) : null,
+      child: _switchRow(
+        icon: icon,
+        color: color,
+        title: title,
+        subtitle: subtitle,
+        value: value,
+        onChanged: onChanged,
       ),
     );
   }
@@ -985,43 +1277,47 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: const Color(0xFF181824),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.tealAccent, size: 26),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 16),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: Colors.white54, fontSize: 13),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Row(
+        children: [
+          _iconBadge(icon, AppColors.accent),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
+                    fontSize: 16,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white38),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppColors.textDim,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 24,
+            color: AppColors.textFaint,
+          ),
+        ],
       ),
     );
   }
