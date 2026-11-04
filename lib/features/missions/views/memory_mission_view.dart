@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/ui/app_ui.dart';
 
 class MemoryMissionView extends StatefulWidget {
   final String difficulty;
@@ -34,7 +36,9 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
 
   void _startRound() {
     final rnd = Random();
-    final seqLen = widget.difficulty == 'easy' ? 3 : (widget.difficulty == 'hard' ? 5 : 4);
+    final seqLen = widget.difficulty == 'easy'
+        ? 3
+        : (widget.difficulty == 'hard' ? 5 : 4);
     _sequence = List.generate(seqLen, (_) => rnd.nextInt(9));
     _userInputs = [];
     _hasError = false;
@@ -75,6 +79,7 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
       final currentPos = _userInputs.length - 1;
 
       if (_userInputs[currentPos] != _sequence[currentPos]) {
+        HapticFeedback.heavyImpact();
         _hasError = true;
         _isShowingSequence = true;
         Future.delayed(const Duration(milliseconds: 800), () {
@@ -97,7 +102,9 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        final minHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0;
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
@@ -108,11 +115,11 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'MEMORY ROUND $_currentRound of ${widget.totalRounds}',
-                    style: const TextStyle(
-                      color: Colors.tealAccent,
+                    'Round $_currentRound of ${widget.totalRounds}',
+                    style: TextStyle(
+                      color: AppColors.accent,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      letterSpacing: 0,
                       fontSize: 14,
                     ),
                   ),
@@ -124,10 +131,12 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       _isShowingSequence
-                          ? (_hasError ? 'WRONG! WATCH AGAIN...' : 'WATCH THE SEQUENCE...')
-                          : 'REPEAT THE SEQUENCE (${_userInputs.length} / ${_sequence.length})',
+                          ? (_hasError
+                                ? 'Wrong. Watch again.'
+                                : 'Watch the pattern')
+                          : 'Your turn: ${_userInputs.length} of ${_sequence.length}',
                       style: TextStyle(
-                        color: _hasError ? Colors.redAccent : Colors.white,
+                        color: _hasError ? AppColors.danger : AppColors.text,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                       ),
@@ -138,43 +147,61 @@ class _MemoryMissionViewState extends State<MemoryMissionView> {
 
                 // 3x3 Grid
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280, maxHeight: 280),
+                  constraints: const BoxConstraints(
+                    maxWidth: 280,
+                    maxHeight: 280,
+                  ),
                   child: AspectRatio(
                     aspectRatio: 1.0,
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                          ),
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: 9,
                       itemBuilder: (context, index) {
                         final isFlashing = _flashingTile == index;
-                        return GestureDetector(
+                        final isWrong =
+                            _hasError &&
+                            _userInputs.isNotEmpty &&
+                            _userInputs.last == index;
+                        return Pressable(
+                          scale: 0.9,
                           onTap: () => _onTileTap(index),
-                          child: AnimatedContainer(
+                          child: AnimatedScale(
+                            scale: isFlashing ? 1.06 : 1,
                             duration: const Duration(milliseconds: 150),
-                            decoration: BoxDecoration(
-                              color: isFlashing
-                                  ? Colors.tealAccent
-                                  : (_hasError && _userInputs.isNotEmpty && _userInputs.last == index
-                                      ? Colors.redAccent
-                                      : const Color(0xFF262638)),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: isFlashing ? Colors.white : Colors.white.withOpacity(0.1),
-                                width: isFlashing ? 3 : 1,
+                            curve: Curves.easeOutBack,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              decoration: BoxDecoration(
+                                color: isFlashing
+                                    ? AppColors.accent
+                                    : (isWrong
+                                          ? AppColors.danger
+                                          : AppColors.surfaceHi),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isFlashing
+                                      ? AppColors.text
+                                      : AppColors.border,
+                                  width: isFlashing ? 2 : 1,
+                                ),
+                                boxShadow: isFlashing
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.accent.withValues(
+                                            alpha: 0.6,
+                                          ),
+                                          blurRadius: 24,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
                               ),
-                              boxShadow: isFlashing
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.tealAccent.withOpacity(0.6),
-                                        blurRadius: 16,
-                                        spreadRadius: 2,
-                                      )
-                                    ]
-                                  : [],
                             ),
                           ),
                         );

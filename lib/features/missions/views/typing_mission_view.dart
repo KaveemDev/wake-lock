@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/ui/app_ui.dart';
 
 class TypingMissionView extends StatefulWidget {
   final String difficulty;
@@ -22,6 +24,7 @@ class _TypingMissionViewState extends State<TypingMissionView> {
   late String _targetQuote;
   final TextEditingController _controller = TextEditingController();
   bool _hasError = false;
+  int _errorCount = 0;
 
   final List<String> _quotes = [
     "Wake up with determination and go to bed with satisfaction.",
@@ -33,7 +36,7 @@ class _TypingMissionViewState extends State<TypingMissionView> {
     "Your future is created by what you do today, not tomorrow.",
     "Focus on being productive instead of busy.",
     "Small daily improvements over time lead to stunning results.",
-    "Do something today that your future self will thank you for."
+    "Do something today that your future self will thank you for.",
   ];
 
   @override
@@ -50,7 +53,8 @@ class _TypingMissionViewState extends State<TypingMissionView> {
   }
 
   void _onSubmit() {
-    if (_controller.text.trim().toLowerCase() == _targetQuote.trim().toLowerCase()) {
+    if (_controller.text.trim().toLowerCase() ==
+        _targetQuote.trim().toLowerCase()) {
       if (_currentIndex >= widget.totalQuotes) {
         widget.onCompleted();
       } else {
@@ -60,8 +64,10 @@ class _TypingMissionViewState extends State<TypingMissionView> {
         });
       }
     } else {
+      HapticFeedback.heavyImpact();
       setState(() {
         _hasError = true;
+        _errorCount++;
       });
     }
   }
@@ -79,37 +85,57 @@ class _TypingMissionViewState extends State<TypingMissionView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'QUOTE $_currentIndex of ${widget.totalQuotes}',
-            style: const TextStyle(
-              color: Colors.tealAccent,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              fontSize: 14,
+            'Phrase $_currentIndex of ${widget.totalQuotes}',
+            style: TextStyle(
+              color: AppColors.accent,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(
+                begin: 0,
+                end: (_currentIndex - 1) / widget.totalQuotes,
+              ),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, _) => LinearProgressIndicator(
+                value: v,
+                minHeight: 6,
+                backgroundColor: AppColors.border,
+                color: AppColors.accent,
+              ),
             ),
           ),
           const SizedBox(height: 20),
 
           // Quote Card
-          Container(
+          AppCard(
+            key: ValueKey(_targetQuote),
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E2C),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
-            ),
+            borderColor: AppColors.accent.withValues(alpha: 0.3),
             child: Column(
               children: [
-                const Text(
-                  'TYPE THE PHRASE EXACTLY:',
-                  style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold),
+                Text(
+                  'Type this exactly',
+                  style: TextStyle(
+                    color: AppColors.textDim,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   _targetQuote,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.text,
                     height: 1.4,
                   ),
                   textAlign: TextAlign.center,
@@ -120,51 +146,48 @@ class _TypingMissionViewState extends State<TypingMissionView> {
           const SizedBox(height: 24),
 
           // Input Field
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E2C),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _hasError ? Colors.redAccent : Colors.white.withOpacity(0.2),
-                width: _hasError ? 2 : 1,
+          ShakeOnChange(
+            trigger: _errorCount,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _hasError
+                      ? AppColors.danger
+                      : AppColors.border,
+                  width: _hasError ? 2 : 1,
+                ),
               ),
-            ),
-            child: TextField(
-              controller: _controller,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Type exact quote here...',
-                hintStyle: const TextStyle(color: Colors.white38),
-                errorText: _hasError ? 'Does not match quote. Try again!' : null,
+              child: TextField(
+                controller: _controller,
+                style: TextStyle(color: AppColors.text, fontSize: 16),
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Your text',
+                  hintStyle: TextStyle(color: AppColors.textFaint),
+                  errorText: _hasError
+                      ? 'That doesn\'t match yet.'
+                      : null,
+                ),
+                onChanged: (_) {
+                  if (_hasError) {
+                    setState(() => _hasError = false);
+                  }
+                },
               ),
-              onChanged: (_) {
-                if (_hasError) {
-                  setState(() => _hasError = false);
-                }
-              },
             ),
           ),
           const SizedBox(height: 24),
 
           // Submit Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.tealAccent,
-                foregroundColor: Colors.black,
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: _onSubmit,
-              child: const Text(
-                'SUBMIT QUOTE',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.2),
-              ),
-            ),
+          GradientButton(
+            label: 'Check',
+            icon: Icons.check_rounded,
+            onPressed: _onSubmit,
           ),
         ],
       ),

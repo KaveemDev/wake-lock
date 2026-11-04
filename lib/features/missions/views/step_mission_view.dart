@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../core/ui/app_ui.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class StepMissionView extends StatefulWidget {
@@ -29,24 +30,27 @@ class _StepMissionViewState extends State<StepMissionView> {
   }
 
   void _startListening() {
-    _subscription = userAccelerometerEventStream(
-      samplingPeriod: SensorInterval.uiInterval,
-    ).listen((event) {
-      final magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-      if (magnitude > 11.0) {
-        final now = DateTime.now();
-        if (now.difference(_lastStepTime).inMilliseconds > 400) {
-          _lastStepTime = now;
-          setState(() {
-            _steps++;
-            if (_steps >= widget.targetSteps) {
-              _subscription?.cancel();
-              widget.onCompleted();
+    _subscription =
+        userAccelerometerEventStream(
+          samplingPeriod: SensorInterval.uiInterval,
+        ).listen((event) {
+          final magnitude = sqrt(
+            event.x * event.x + event.y * event.y + event.z * event.z,
+          );
+          if (magnitude > 11.0) {
+            final now = DateTime.now();
+            if (now.difference(_lastStepTime).inMilliseconds > 400) {
+              _lastStepTime = now;
+              setState(() {
+                _steps++;
+                if (_steps >= widget.targetSteps) {
+                  _subscription?.cancel();
+                  widget.onCompleted();
+                }
+              });
             }
-          });
-        }
-      }
-    });
+          }
+        });
   }
 
   @override
@@ -61,7 +65,9 @@ class _StepMissionViewState extends State<StepMissionView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        final minHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0;
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
@@ -69,62 +75,58 @@ class _StepMissionViewState extends State<StepMissionView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const FittedBox(
+                FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'WALK AWAY FROM YOUR BED',
+                    'Get out of bed and walk',
                     style: TextStyle(
-                      color: Colors.tealAccent,
+                      color: AppColors.accent,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      letterSpacing: 0,
                       fontSize: 14,
                     ),
                   ),
                 ),
                 const SizedBox(height: 36),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 220,
-                      height: 220,
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 16,
-                        backgroundColor: Colors.white.withOpacity(0.1),
-                        color: Colors.tealAccent,
+                ProgressRing(
+                  value: progress,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.directions_walk_rounded,
+                        size: 44,
+                        color: AppColors.accent,
                       ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.directions_walk, size: 48, color: Colors.tealAccent),
-                        const SizedBox(height: 8),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '$_steps / ${widget.targetSteps}',
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$_steps / ${widget.targetSteps}',
+                          style: TextStyle(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
                           ),
                         ),
-                        const Text(
-                          'STEPS',
-                          style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'steps',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 36),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
-                    'Get out of bed and take steps around your room to stop the alarm.',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    'Carry your phone. The alarm stops when you hit the goal.',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ),

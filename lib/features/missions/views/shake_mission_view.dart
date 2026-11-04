@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/ui/app_ui.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class ShakeMissionView extends StatefulWidget {
@@ -17,7 +19,8 @@ class ShakeMissionView extends StatefulWidget {
   State<ShakeMissionView> createState() => _ShakeMissionViewState();
 }
 
-class _ShakeMissionViewState extends State<ShakeMissionView> with SingleTickerProviderStateMixin {
+class _ShakeMissionViewState extends State<ShakeMissionView>
+    with SingleTickerProviderStateMixin {
   int _shakes = 0;
   DateTime _lastShakeTime = DateTime.fromMillisecondsSinceEpoch(0);
   StreamSubscription<UserAccelerometerEvent>? _subscription;
@@ -36,25 +39,31 @@ class _ShakeMissionViewState extends State<ShakeMissionView> with SingleTickerPr
   }
 
   void _startListening() {
-    _subscription = userAccelerometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
-    ).listen((event) {
-      final magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-      if (magnitude > 13.0) {
-        final now = DateTime.now();
-        if (now.difference(_lastShakeTime).inMilliseconds > 180) {
-          _lastShakeTime = now;
-          _pulseController.forward().then((_) => _pulseController.reverse());
-          setState(() {
-            _shakes++;
-            if (_shakes >= widget.targetShakes) {
-              _subscription?.cancel();
-              widget.onCompleted();
+    _subscription =
+        userAccelerometerEventStream(
+          samplingPeriod: SensorInterval.gameInterval,
+        ).listen((event) {
+          final magnitude = sqrt(
+            event.x * event.x + event.y * event.y + event.z * event.z,
+          );
+          if (magnitude > 13.0) {
+            final now = DateTime.now();
+            if (now.difference(_lastShakeTime).inMilliseconds > 180) {
+              _lastShakeTime = now;
+              HapticFeedback.lightImpact();
+              _pulseController.forward().then(
+                (_) => _pulseController.reverse(),
+              );
+              setState(() {
+                _shakes++;
+                if (_shakes >= widget.targetShakes) {
+                  _subscription?.cancel();
+                  widget.onCompleted();
+                }
+              });
             }
-          });
-        }
-      }
-    });
+          }
+        });
   }
 
   @override
@@ -70,7 +79,9 @@ class _ShakeMissionViewState extends State<ShakeMissionView> with SingleTickerPr
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        final minHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0;
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
@@ -78,14 +89,14 @@ class _ShakeMissionViewState extends State<ShakeMissionView> with SingleTickerPr
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const FittedBox(
+                FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    'SHAKE VIGOROUSLY TO DISMISS',
+                    'Shake your phone',
                     style: TextStyle(
-                      color: Colors.tealAccent,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
                       fontSize: 14,
                     ),
                   ),
@@ -93,53 +104,45 @@ class _ShakeMissionViewState extends State<ShakeMissionView> with SingleTickerPr
                 const SizedBox(height: 36),
                 ScaleTransition(
                   scale: _pulseController,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 220,
-                        height: 220,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 16,
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          color: Colors.tealAccent,
+                  child: ProgressRing(
+                    value: progress,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.vibration_rounded,
+                          size: 40,
+                          color: AppColors.accent,
                         ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '$_shakes / ${widget.targetShakes}',
-                              style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'SHAKES',
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '$_shakes / ${widget.targetShakes}',
                             style: TextStyle(
-                              color: Colors.white60,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        Text(
+                          'shakes',
+                          style: TextStyle(
+                            color: AppColors.textDim,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 36),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
-                    'Keep shaking your phone until the circle fills up!',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    'Keep going until the ring is full.',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ),

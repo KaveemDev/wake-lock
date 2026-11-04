@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../../../core/db/isar_service.dart';
 import '../../../core/db/models/alarm.dart';
 import '../../../core/db/models/alarm_history.dart';
 import '../../../core/services/alarm_scheduler.dart';
+import '../../../core/ui/app_ui.dart';
 import '../../../core/utils/alarm_time_utils.dart';
 import 'math_mission_view.dart';
 import 'shake_mission_view.dart';
@@ -46,7 +48,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     "Today is a new opportunity to build your future and conquer your goals.",
     "Discipline equals freedom. You beat the alarm today!",
     "Greatness is won in the quiet early hours while others sleep.",
-    "Focus on your mission. Every morning is a fresh start."
+    "Focus on your mission. Every morning is a fresh start.",
   ];
 
   @override
@@ -105,7 +107,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
 
     final isarService = ref.read(isarServiceProvider);
     final scheduler = ref.read(alarmSchedulerProvider);
-    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
+    final realId = widget.alarmId >= 90000
+        ? widget.alarmId - 90000
+        : widget.alarmId;
 
     final history = AlarmHistory(
       alarmId: realId,
@@ -131,7 +135,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       _isVerificationCheck = false;
     });
     try {
-      await const MethodChannel('com.focusalarm.app/ringing').invokeMethod('resumeRing');
+      await const MethodChannel(
+        'com.focusalarm.app/ringing',
+      ).invokeMethod('resumeRing');
     } catch (e) {
       debugPrint('Failed to resume ring on verification escalation: $e');
     }
@@ -143,7 +149,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       _secondsRemaining = 60;
     });
     try {
-      await const MethodChannel('com.focusalarm.app/ringing').invokeMethod('pauseRing');
+      await const MethodChannel(
+        'com.focusalarm.app/ringing',
+      ).invokeMethod('pauseRing');
     } catch (e) {
       debugPrint('Failed to pause ring: $e');
     }
@@ -175,7 +183,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       _hasStartedMission = false;
     });
     try {
-      await const MethodChannel('com.focusalarm.app/ringing').invokeMethod('resumeRing');
+      await const MethodChannel(
+        'com.focusalarm.app/ringing',
+      ).invokeMethod('resumeRing');
     } catch (e) {
       debugPrint('Failed to resume ring: $e');
     }
@@ -191,7 +201,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     final isarService = ref.read(isarServiceProvider);
     final scheduler = ref.read(alarmSchedulerProvider);
     final elapsedSecs = DateTime.now().difference(_startTime).inSeconds;
-    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
+    final realId = widget.alarmId >= 90000
+        ? widget.alarmId - 90000
+        : widget.alarmId;
 
     // Record History (Phase 6 Statistics)
     final history = AlarmHistory(
@@ -227,13 +239,15 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     }
 
     // Phase 4 Wake-Up Verification Check-in (Schedule ONLY if completing primary alarm)
-    if (widget.alarmId < 90000 && _alarm != null && _alarm!.isVerificationRequired) {
+    if (widget.alarmId < 90000 &&
+        _alarm != null &&
+        _alarm!.isVerificationRequired) {
       final verifyMins = _alarm!.verificationDurationMinutes;
       final verifyTime = DateTime.now().add(Duration(minutes: verifyMins));
       await scheduler.scheduleAlarm(
         id: 90000 + realId,
         time: verifyTime,
-        label: 'Verification Check! Are you awake?',
+        label: 'Still up?',
         soundPath: _alarm!.soundPath,
       );
     }
@@ -249,7 +263,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   Future<void> _onSnooze() async {
     _idleTimer?.cancel();
     _verificationTimer?.cancel();
-    if (_alarm != null && _alarm!.isHardcoreMode) return; // Hardcore blocks snooze!
+    if (_alarm != null && _alarm!.isHardcoreMode) {
+      return; // Hardcore blocks snooze!
+    }
 
     final scheduler = ref.read(alarmSchedulerProvider);
     final snoozeMins = _alarm?.snoozeDurationMinutes ?? 5;
@@ -259,7 +275,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       _snoozes++;
     });
 
-    final realId = widget.alarmId >= 90000 ? widget.alarmId - 90000 : widget.alarmId;
+    final realId = widget.alarmId >= 90000
+        ? widget.alarmId - 90000
+        : widget.alarmId;
     final snoozeTime = DateTime.now().add(Duration(minutes: snoozeMins));
     await scheduler.scheduleAlarm(
       id: realId,
@@ -277,9 +295,9 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0D0D14),
-        body: Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
 
@@ -287,7 +305,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     if (_isVerificationCheck) {
       if (_isVerificationConfirmed) {
         return Scaffold(
-          backgroundColor: const Color(0xFF0D0D14),
+          backgroundColor: AppColors.bg,
           body: SafeArea(
             child: Center(
               child: Padding(
@@ -295,22 +313,28 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.check_circle, size: 96, color: Colors.cyanAccent),
+                    PopIn(
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        size: 110,
+                        color: AppColors.accent,
+                      ),
+                    ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'WAKE-UP VERIFIED!',
+                    Text(
+                      'You\'re up',
                       style: TextStyle(
                         fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                        letterSpacing: 0,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Great job! You confirmed check-in. Have a productive day!',
-                      style: TextStyle(color: Colors.cyanAccent, fontSize: 16),
+                    Text(
+                      'Thanks. You\'re all set.',
+                      style: TextStyle(color: AppColors.success, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -322,7 +346,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       }
 
       return Scaffold(
-        backgroundColor: const Color(0xFF0D0D14),
+        backgroundColor: AppColors.bg,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -330,54 +354,74 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.cyanAccent.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.4), width: 2),
+                  PulseGlow(
+                    color: AppColors.accent,
+                    radius: 36,
+                    child: Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accent.withValues(alpha: 0.5),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.verified_user_rounded,
+                        size: 80,
+                        color: AppColors.accent,
+                      ),
                     ),
-                    child: const Icon(Icons.verified_user, size: 88, color: Colors.cyanAccent),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'WAKE-UP CHECK-IN',
+                  Text(
+                    'Check-in',
                     style: TextStyle(
                       fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 2,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.text,
+                      letterSpacing: 0,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'ARE YOU STILL AWAKE?',
+                  Text(
+                    'Still up?',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.cyanAccent,
-                      letterSpacing: 1.2,
+                      color: AppColors.success,
+                      letterSpacing: 0,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                      border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.timer_outlined, color: Colors.amberAccent, size: 20),
+                        Icon(
+                          Icons.timer_outlined,
+                          color: AppColors.warn,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          'Confirmation timeout: ${_verificationSecondsRemaining}s',
-                          style: const TextStyle(
-                            color: Colors.amberAccent,
+                          '${_verificationSecondsRemaining}s left',
+                          style: TextStyle(
+                            color: AppColors.warn,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -391,8 +435,8 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                     height: 72,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.tealAccent,
-                        foregroundColor: Colors.black,
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.onAccent,
                         elevation: 12,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(36),
@@ -403,16 +447,16 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                         "YES, I'M AWAKE!",
                         style: TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'If you do not confirm within 60 seconds, your wake-up mission will trigger automatically.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  Text(
+                    'Tap below within 60 seconds, or the alarm and your mission start again.',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -424,10 +468,11 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     }
 
     if (_isMissionSolved) {
-      final quote = _briefingQuotes[DateTime.now().second % _briefingQuotes.length];
+      final quote =
+          _briefingQuotes[DateTime.now().second % _briefingQuotes.length];
       final verifyMins = _alarm?.verificationDurationMinutes ?? 5;
       return Scaffold(
-        backgroundColor: const Color(0xFF0D0D14),
+        backgroundColor: AppColors.bg,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -435,36 +480,55 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle, size: 96, color: Colors.tealAccent),
+                  PopIn(
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 110,
+                      color: AppColors.accent,
+                    ),
+                  ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'MISSION ACCOMPLISHED!',
+                  Text(
+                    'Alarm off',
                     style: TextStyle(
                       fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.text,
+                      letterSpacing: 0,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   if (_alarm?.isVerificationRequired == true)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.cyanAccent.withOpacity(0.15),
+                        color: AppColors.success.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.cyanAccent.withOpacity(0.4)),
+                        border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.verified_user, color: Colors.cyanAccent, size: 20),
+                          Icon(
+                            Icons.verified_user,
+                            color: AppColors.success,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              'Wake-up check-in scheduled in $verifyMins ${verifyMins == 1 ? "minute" : "minutes"}.',
-                              style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                              'We\'ll check you\'re still up in $verifyMins ${verifyMins == 1 ? "minute" : "minutes"}.',
+                              style: TextStyle(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -475,16 +539,18 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF181824),
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.tealAccent.withOpacity(0.3)),
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       '"$quote"',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontStyle: FontStyle.italic,
-                        color: Colors.white,
+                        color: AppColors.text,
                         height: 1.4,
                       ),
                       textAlign: TextAlign.center,
@@ -504,15 +570,20 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
     final isHardcore = _alarm?.isHardcoreMode ?? false;
 
     if (!_hasStartedMission) {
-      final missionName = missionType == 'shake' ? 'SHAKE CHALLENGE'
-          : missionType == 'typing' ? 'TYPING CHALLENGE'
-          : missionType == 'memory' ? 'MEMORY CHALLENGE'
-          : missionType == 'step' ? 'STEP CHALLENGE'
-          : missionType == 'none' ? 'SIMPLE DISMISS'
-          : 'MATH CHALLENGE';
+      final missionName = missionType == 'shake'
+          ? 'Shake'
+          : missionType == 'typing'
+          ? 'Typing'
+          : missionType == 'memory'
+          ? 'Memory'
+          : missionType == 'step'
+          ? 'Steps'
+          : missionType == 'none'
+          ? 'Tap to stop'
+          : 'Math';
 
       return Scaffold(
-        backgroundColor: Colors.red.shade900,
+        backgroundColor: const Color(0xFF2A0610),
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -520,53 +591,56 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.alarm_on,
-                    size: 96,
-                    color: Colors.white,
-                  ),
+                  const RingingBell(),
                   const SizedBox(height: 20),
-                  const Text(
-                    'WAKELOCK ALARM RINGING!',
+                  Text(
+                    'Alarm',
                     style: TextStyle(
                       fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 2,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.text,
+                      letterSpacing: 0,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    widget.label.toUpperCase(),
-                    style: const TextStyle(
+                    widget.label,
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white70,
+                      color: AppColors.textDim,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white24),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.bolt, color: Colors.amberAccent, size: 24),
+                        Icon(
+                          Icons.bolt,
+                          color: AppColors.warn,
+                          size: 24,
+                        ),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            'MISSION: $missionName (${difficulty.toUpperCase()})',
-                            style: const TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.w900,
+                            '$missionName · $difficulty',
+                            style: TextStyle(
+                              color: AppColors.warn,
+                              fontWeight: FontWeight.w700,
                               fontSize: 15,
-                              letterSpacing: 1.1,
+                              letterSpacing: 0,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -575,37 +649,25 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                     ),
                   ),
                   const SizedBox(height: 48),
-                  SizedBox(
-                    width: double.infinity,
+                  GradientButton(
+                    label: 'Start',
+                    icon: Icons.bolt_rounded,
                     height: 72,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.red.shade900,
-                        elevation: 12,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(36),
-                        ),
-                      ),
-                      onPressed: _startMissionFlow,
-                      child: const Text(
-                        'START MISSION (60s)',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
+                    colors: [AppColors.text, Color(0xFFFFD6DD)],
+                    textColor: const Color(0xFF8A0F25),
+                    onPressed: _startMissionFlow,
                   ),
                   const SizedBox(height: 24),
                   if (!isHardcore && (_alarm?.snoozeDurationMinutes ?? 5) > 0)
                     TextButton.icon(
                       onPressed: _onSnooze,
-                      icon: const Icon(Icons.snooze, color: Colors.white70),
+                      icon: Icon(Icons.snooze, color: AppColors.textDim),
                       label: Text(
-                        'Snooze for ${_alarm?.snoozeDurationMinutes ?? 5} mins',
-                        style: const TextStyle(color: Colors.white70, fontSize: 16),
+                        'Snooze ${_alarm?.snoozeDurationMinutes ?? 5} min',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                 ],
@@ -621,7 +683,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
       onPointerMove: (_) => _resetIdleTimer(),
       onPointerUp: (_) => _resetIdleTimer(),
       child: Scaffold(
-        backgroundColor: const Color(0xFF0D0D14),
+        backgroundColor: AppColors.bg,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -630,12 +692,19 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                 // Idle Timer Banner at Top
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
-                    color: _secondsRemaining <= 15 ? Colors.redAccent.withOpacity(0.2) : Colors.amberAccent.withOpacity(0.15),
+                    color: _secondsRemaining <= 15
+                        ? AppColors.danger.withValues(alpha: 0.2)
+                        : AppColors.warn.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _secondsRemaining <= 15 ? Colors.redAccent : Colors.amberAccent,
+                      color: _secondsRemaining <= 15
+                          ? AppColors.danger
+                          : AppColors.warn,
                     ),
                   ),
                   child: Row(
@@ -643,14 +712,18 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                     children: [
                       Icon(
                         Icons.timer,
-                        color: _secondsRemaining <= 15 ? Colors.redAccent : Colors.amberAccent,
+                        color: _secondsRemaining <= 15
+                            ? AppColors.danger
+                            : AppColors.warn,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Alarm Paused. Idle timeout: ${_secondsRemaining}s',
+                        'Rings again in ${_secondsRemaining}s',
                         style: TextStyle(
-                          color: _secondsRemaining <= 15 ? Colors.redAccent : Colors.amberAccent,
+                          color: _secondsRemaining <= 15
+                              ? AppColors.danger
+                              : AppColors.warn,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -666,12 +739,12 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        widget.label.toUpperCase(),
-                        style: const TextStyle(
+                        widget.label,
+                        style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
+                          letterSpacing: 0,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -679,19 +752,26 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                     ),
                     if (isHardcore)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent,
+                          color: AppColors.danger,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.local_fire_department, size: 16, color: Colors.white),
+                            Icon(
+                              Icons.local_fire_department,
+                              size: 16,
+                              color: AppColors.text,
+                            ),
                             SizedBox(width: 4),
                             Text(
-                              'HARDCORE',
+                              'Hardcore',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -702,7 +782,7 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Divider(color: Colors.white12),
+                Divider(color: AppColors.border),
                 const SizedBox(height: 12),
 
                 // Active Mission View
@@ -711,14 +791,18 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
                 ),
 
                 // Snooze Option (Hidden if Hardcore Mode or Snooze Off)
-                if (!isHardcore && (_alarm?.snoozeDurationMinutes ?? 5) > 0) ...[
+                if (!isHardcore &&
+                    (_alarm?.snoozeDurationMinutes ?? 5) > 0) ...[
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: _onSnooze,
-                    icon: const Icon(Icons.snooze, color: Colors.white54),
+                    icon: Icon(Icons.snooze, color: AppColors.textDim),
                     label: Text(
-                      'Snooze for ${_alarm?.snoozeDurationMinutes ?? 5} mins',
-                      style: const TextStyle(color: Colors.white54, fontSize: 16),
+                      'Snooze ${_alarm?.snoozeDurationMinutes ?? 5} min',
+                      style: TextStyle(
+                        color: AppColors.textDim,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
@@ -768,21 +852,23 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.alarm_on, size: 96, color: Colors.tealAccent),
+              Icon(Icons.alarm_on, size: 96, color: AppColors.accent),
               const SizedBox(height: 36),
               SizedBox(
                 width: 240,
                 height: 72,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.tealAccent,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(36)),
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(36),
+                    ),
                   ),
                   onPressed: _onMissionComplete,
                   child: const Text(
-                    'DISMISS ALARM',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                    'Stop alarm',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -790,5 +876,61 @@ class _MissionHostScreenState extends ConsumerState<MissionHostScreen> {
           ),
         );
     }
+  }
+}
+
+/// Bell that wobbles in bursts with a red glow, signalling the alarm is ringing.
+class RingingBell extends StatefulWidget {
+  const RingingBell({super.key});
+
+  @override
+  State<RingingBell> createState() => _RingingBellState();
+}
+
+class _RingingBellState extends State<RingingBell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseGlow(
+      color: AppColors.danger,
+      radius: 44,
+      child: Container(
+        padding: const EdgeInsets.all(26),
+        decoration: const BoxDecoration(
+          color: Color(0xFF3F0A18),
+          shape: BoxShape.circle,
+        ),
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, child) {
+            final v = _c.value;
+            final angle = v < 0.55
+                ? math.sin(v / 0.55 * math.pi * 7) * 0.35 * (1 - v / 0.55)
+                : 0.0;
+            return Transform.rotate(
+              angle: angle,
+              alignment: Alignment.topCenter,
+              child: child,
+            );
+          },
+          child: Icon(
+            Icons.notifications_active_rounded,
+            size: 84,
+            color: AppColors.text,
+          ),
+        ),
+      ),
+    );
   }
 }

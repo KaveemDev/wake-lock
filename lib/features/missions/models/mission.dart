@@ -12,18 +12,18 @@ class MissionConfig {
   String get displayName {
     switch (type) {
       case 'math':
-        return 'Math Problems';
+        return 'Math';
       case 'shake':
-        return 'Shake Phone';
+        return 'Shake';
       case 'typing':
-        return 'Quote Typing';
+        return 'Typing';
       case 'memory':
-        return 'Memory Grid';
+        return 'Memory';
       case 'step':
-        return 'Step Walker';
+        return 'Steps';
       case 'none':
       default:
-        return 'Standard (No Mission)';
+        return 'None';
     }
   }
 
@@ -32,16 +32,16 @@ class MissionConfig {
       case 'math':
         return '$count problems ($difficulty)';
       case 'shake':
-        return '$count shakes vigorously';
+        return '$count shakes';
       case 'typing':
-        return '$count quotes ($difficulty)';
+        return '$count phrases ($difficulty)';
       case 'memory':
-        return '$count sequence rounds ($difficulty)';
+        return '$count rounds ($difficulty)';
       case 'step':
-        return '$count steps away from bed';
+        return '$count steps';
       case 'none':
       default:
-        return 'Tap Stop button directly';
+        return 'Tap to stop';
     }
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/ui/app_ui.dart';
 
 class MathMissionView extends StatefulWidget {
   final String difficulty;
@@ -23,6 +25,7 @@ class _MathMissionViewState extends State<MathMissionView> {
   late int _correctAnswer;
   String _inputBuffer = '';
   bool _hasError = false;
+  int _errorCount = 0;
 
   @override
   void initState() {
@@ -63,7 +66,8 @@ class _MathMissionViewState extends State<MathMissionView> {
         _correctAnswer = a + b;
       } else {
         final a = 20 + rnd.nextInt(80); // 20 to 99
-        final b = 10 + rnd.nextInt(a - 10); // 10 to a-1 (ensures positive answer)
+        final b =
+            10 + rnd.nextInt(a - 10); // 10 to a-1 (ensures positive answer)
         _equationText = '$a - $b';
         _correctAnswer = a - b;
       }
@@ -100,8 +104,10 @@ class _MathMissionViewState extends State<MathMissionView> {
         });
       }
     } else {
+      HapticFeedback.heavyImpact();
       setState(() {
         _hasError = true;
+        _errorCount++;
         _inputBuffer = '';
       });
     }
@@ -111,7 +117,9 @@ class _MathMissionViewState extends State<MathMissionView> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final minHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0;
+        final minHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0;
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: ConstrainedBox(
@@ -119,70 +127,105 @@ class _MathMissionViewState extends State<MathMissionView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Header
+                // Progress
                 Text(
-                  'PROBLEM $_currentIndex of ${widget.totalProblems}',
-                  style: const TextStyle(
-                    color: Colors.tealAccent,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                    fontSize: 14,
+                  'Problem $_currentIndex of ${widget.totalProblems}',
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                    fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Equation Card
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E2C),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _hasError ? Colors.redAccent : Colors.white.withOpacity(0.1),
-                      width: _hasError ? 2 : 1,
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(
+                      begin: 0,
+                      end: (_currentIndex - 1) / widget.totalProblems,
+                    ),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, _) => LinearProgressIndicator(
+                      value: v,
+                      minHeight: 6,
+                      backgroundColor: AppColors.border,
+                      color: AppColors.accent,
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '$_equationText = ?',
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
+                ),
+                const SizedBox(height: 18),
+
+                // Equation Card
+                ShakeOnChange(
+                  trigger: _errorCount,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _hasError
+                            ? AppColors.danger
+                            : AppColors.border,
+                        width: _hasError ? 2 : 1,
                       ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: 200,
-                        height: 54,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _hasError ? Colors.redAccent : Colors.tealAccent.withOpacity(0.4),
+                    ),
+                    child: Column(
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '$_equationText = ?',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text,
+                            ),
                           ),
                         ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              _inputBuffer.isEmpty ? (_hasError ? 'WRONG' : '_') : _inputBuffer,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: _hasError ? Colors.redAccent : Colors.tealAccent,
+                        const SizedBox(height: 16),
+                        Container(
+                          width: 200,
+                          height: 54,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _hasError
+                                  ? AppColors.danger
+                                  : AppColors.accent.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Text(
+                                _inputBuffer.isEmpty
+                                    ? (_hasError ? 'Wrong, try again' : '_')
+                                    : _inputBuffer,
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: _hasError
+                                      ? AppColors.danger
+                                      : AppColors.accent,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -207,9 +250,19 @@ class _MathMissionViewState extends State<MathMissionView> {
                       _buildKey('7', () => _onDigit('7')),
                       _buildKey('8', () => _onDigit('8')),
                       _buildKey('9', () => _onDigit('9')),
-                      _buildKey('C', _onClear, color: Colors.redAccent.withOpacity(0.2), textColor: Colors.redAccent),
+                      _buildKey(
+                        'C',
+                        _onClear,
+                        color: AppColors.danger.withValues(alpha: 0.2),
+                        textColor: AppColors.danger,
+                      ),
                       _buildKey('0', () => _onDigit('0')),
-                      _buildKey('✓', _onSubmit, color: Colors.tealAccent, textColor: Colors.black),
+                      _buildKey(
+                        '✓',
+                        _onSubmit,
+                        color: AppColors.accent,
+                        textColor: AppColors.onAccent,
+                      ),
                     ],
                   ),
                 ),
@@ -221,22 +274,30 @@ class _MathMissionViewState extends State<MathMissionView> {
     );
   }
 
-  Widget _buildKey(String label, VoidCallback onTap, {Color? color, Color? textColor}) {
-    return Material(
-      color: color ?? const Color(0xFF262638),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+  Widget _buildKey(
+    String label,
+    VoidCallback onTap, {
+    Color? color,
+    Color? textColor,
+  }) {
+    return Pressable(
+      onTap: onTap,
+      scale: 0.9,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color ?? AppColors.surfaceHi,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+        ),
         child: Center(
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: textColor ?? Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: textColor ?? AppColors.text,
               ),
             ),
           ),
